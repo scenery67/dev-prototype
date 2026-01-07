@@ -4,9 +4,10 @@ import SockJS from 'sockjs-client';
 import './App.css';
 
 interface ChatMessage {
-  type: 'CHAT' | 'JOIN' | 'LEAVE';
+  type: 'CHAT' | 'JOIN' | 'LEAVE' | 'USER_LIST';
   content: string;
   sender: string;
+  users?: string[];
 }
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
   const [username, setUsername] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [stompClient, setStompClient] = useState<Client | null>(null);
+  const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,7 +37,14 @@ function App() {
         setIsConnected(true);
         client.subscribe('/topic/public', (message) => {
           const chatMessage: ChatMessage = JSON.parse(message.body);
-          setMessages((prev) => [...prev, chatMessage]);
+          
+          // 접속자 목록 업데이트 메시지 처리
+          if (chatMessage.type === 'USER_LIST' && chatMessage.users) {
+            setActiveUsers(chatMessage.users);
+          } else {
+            // 일반 메시지는 채팅 메시지로 추가
+            setMessages((prev) => [...prev, chatMessage]);
+          }
         });
 
         client.publish({
@@ -117,7 +126,19 @@ function App() {
 
         {isConnected && (
           <>
-            <div className="messages-container">
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+              <div className="users-sidebar">
+                <h3>접속자 ({activeUsers.length})</h3>
+                <ul className="users-list">
+                  {activeUsers.map((user, index) => (
+                    <li key={index} className={user === username ? 'current-user' : ''}>
+                      {user === username ? '👤 ' : '👥 '}
+                      {user}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="messages-container">
               {messages.map((msg, index) => (
                 <div key={index} className={`message ${msg.type === 'JOIN' ? 'system' : ''}`}>
                   {msg.type === 'JOIN' ? (
@@ -131,6 +152,7 @@ function App() {
                 </div>
               ))}
               <div ref={messagesEndRef} />
+              </div>
             </div>
 
             <div className="input-container">
