@@ -82,7 +82,7 @@ function App() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -101,7 +101,7 @@ function App() {
                 placeholder="사용자 이름을 입력하세요"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && connect()}
+                onKeyDown={(e) => e.key === 'Enter' && connect()}
                 disabled={isConnected}
               />
               <button onClick={connect}>연결</button>
@@ -139,7 +139,7 @@ function App() {
                 placeholder="메시지를 입력하세요..."
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyDown}
               />
               <button onClick={sendMessage}>전송</button>
             </div>
