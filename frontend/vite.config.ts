@@ -8,7 +8,8 @@ export default defineConfig({
     global: 'globalThis',
   },
   server: {
-    port: 3000,
+    host: '0.0.0.0', // 모든 네트워크 인터페이스에서 접근 가능
+    port: 7000,
     proxy: {
       '/ws': {
         target: 'http://localhost:8080',
