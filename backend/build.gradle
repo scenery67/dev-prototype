@@ -11,6 +11,7 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux' // WebClient 사용을 위해
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

@@ -138,10 +138,25 @@ button:active {
   text-align: center;
 }
 
+.message.bot {
+  background: #f3e5f5;
+  border-left: 4px solid #9c27b0;
+}
+
 .system-message {
   color: #1976d2;
   font-style: italic;
   font-size: 14px;
+}
+
+.bot-sender {
+  font-weight: 600;
+  color: #9c27b0;
+  margin-right: 8px;
+}
+
+.bot-content {
+  color: #333;
 }
 
 .sender {

@@ -12,7 +12,8 @@ public class ChatMessage {
         CHAT,
         JOIN,
         LEAVE,
-        USER_LIST // 접속자 목록 업데이트 타입
+        USER_LIST, // 접속자 목록 업데이트 타입
+        BOT // 챗봇 메시지 타입
     }
 
     public MessageType getType() {

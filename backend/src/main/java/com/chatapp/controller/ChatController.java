@@ -29,7 +29,9 @@ public class ChatController {
     @SendTo("/topic/public")
     public ChatMessage sendMessage(ChatMessage message) {
         // Service 레이어에서 비즈니스 로직 처리
-        return chatService.processMessage(message);
+        ChatMessage processedMessage = chatService.processMessage(message);
+        // null이면 메시지를 브로드캐스트하지 않음 (챗봇 명령어인 경우)
+        return processedMessage;
     }
 
     /**
