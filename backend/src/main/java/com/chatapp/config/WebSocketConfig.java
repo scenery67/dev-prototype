@@ -22,11 +22,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // 서버에서 클라이언트로 메시지를 브로드캐스트할 경로 설정
         // 클라이언트는 /topic으로 시작하는 경로를 구독하여 메시지를 수신
-        config.enableSimpleBroker("/topic");
+        // /user prefix도 활성화하여 개인 큐 사용 가능
+        config.enableSimpleBroker("/topic", "/queue", "/user");
         
         // 클라이언트에서 서버로 메시지를 전송할 때 사용하는 경로 접두사 설정
         // 클라이언트는 /app으로 시작하는 경로로 메시지를 전송
         config.setApplicationDestinationPrefixes("/app");
+        
+        // 사용자별 메시지 전송을 위한 prefix 설정
+        config.setUserDestinationPrefix("/user");
     }
 
     /**

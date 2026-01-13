@@ -1,195 +1,282 @@
-import { useState, useEffect, useRef } from 'react';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { useState } from 'react';
+import { ChannelState } from './types';
+import { STATUS_COLORS } from './constants/boss';
+import { useWebSocket } from './hooks/useWebSocket';
+import BossTabs from './components/BossTabs';
+import StatusLegend from './components/StatusLegend';
+import ChannelSettingsSection from './components/ChannelSettingsSection';
+import ChannelBlock from './components/ChannelBlock';
+import ImageAddModal from './components/ImageAddModal';
 import './App.css';
 
-interface ChatMessage {
-  type: 'CHAT' | 'JOIN' | 'LEAVE' | 'USER_LIST' | 'BOT';
-  content: string;
-  sender: string;
-  users?: string[];
-}
-
 function App() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [username, setUsername] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
-  const [stompClient, setStompClient] = useState<Client | null>(null);
-  const [activeUsers, setActiveUsers] = useState<string[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // 보스 탭
+  const [selectedBossType, setSelectedBossType] = useState<string>('용');
+  
+  // WebSocket 연결 및 상태 관리
+  const {
+    isConnected,
+    stompClient,
+    bossChannels,
+    channelStates,
+  } = useWebSocket(selectedBossType);
+  
+  // 채널 추가
+  const [newChannelId, setNewChannelId] = useState('');
+  
+  // 메모 편집 상태
+  const [editingMemo, setEditingMemo] = useState<{
+    channelId: string;
+  } | null>(null);
+  const [memoInput, setMemoInput] = useState('');
+  
+  // 채널 선택 상태
+  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  
+  // 이미지 추가 모달 상태
+  const [showImageModal, setShowImageModal] = useState(false);
 
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  const connect = () => {
-    if (!username.trim()) {
-      alert('사용자 이름을 입력해주세요.');
+  const createChannel = () => {
+    if (!stompClient || !newChannelId.trim()) {
+      alert('채널 ID를 입력해주세요.');
       return;
     }
-
-    // 동적으로 WebSocket URL 결정
-    // 개발 환경: Vite proxy 사용 (상대 경로)
-    // 프로덕션: 환경 변수 또는 window.location 사용
-    const getWebSocketUrl = () => {
-      if (import.meta.env.DEV) {
-        // 개발 환경: Vite proxy를 통해 연결
-        return '/ws';
-      } else {
-        // 프로덕션: 환경 변수 또는 현재 호스트 사용
-        const backendUrl = import.meta.env.VITE_WS_URL || `http://${window.location.hostname}:8080`;
-        return `${backendUrl}/ws`;
-      }
-    };
-
-    const client = new Client({
-      webSocketFactory: () => new SockJS(getWebSocketUrl()) as any,
-      onConnect: () => {
-        setIsConnected(true);
-        client.subscribe('/topic/public', (message) => {
-          const chatMessage: ChatMessage = JSON.parse(message.body);
-          
-          // 접속자 목록 업데이트 메시지 처리
-          if (chatMessage.type === 'USER_LIST' && chatMessage.users) {
-            setActiveUsers(chatMessage.users);
-          } else {
-            // 일반 메시지는 채팅 메시지로 추가
-            setMessages((prev) => [...prev, chatMessage]);
-          }
-        });
-
-        client.publish({
-          destination: '/app/chat.addUser',
-          body: JSON.stringify({
-            sender: username,
-            type: 'JOIN',
-            content: `${username}님이 채팅방에 참여했습니다.`,
-          }),
-        });
-      },
-      onDisconnect: () => {
-        setIsConnected(false);
-      },
-      onStompError: (frame) => {
-        console.error('STOMP error:', frame);
-      },
+    
+    const channelId = newChannelId.trim();
+    
+    stompClient.publish({
+      destination: '/app/boss/channel.create',
+      body: JSON.stringify({
+        channelId,
+        type: 'CHANNEL_CREATE',
+      }),
     });
-
-    client.activate();
-    setStompClient(client);
+    
+    setNewChannelId('');
   };
 
-  const disconnect = () => {
-    if (stompClient) {
-      stompClient.deactivate();
-      setStompClient(null);
-      setIsConnected(false);
-      setMessages([]);
+  const handleChannelStatus = (channelId: string, status: string) => {
+    if (!stompClient || !selectedBossType || isSelectionMode) return;
+    
+    stompClient.publish({
+      destination: `/app/boss/channel.status`,
+      body: JSON.stringify({
+        bossType: selectedBossType,
+        channelId,
+        status,
+        type: 'CHANNEL_STATUS',
+      }),
+    });
+  };
+
+  const startMemoEdit = (channelId: string) => {
+    if (isSelectionMode) return;
+    const currentMemo = channelStates[selectedBossType]?.[channelId]?.memo || '';
+    setEditingMemo({ channelId });
+    setMemoInput(currentMemo);
+  };
+
+  const saveMemo = () => {
+    if (!stompClient || !editingMemo || !selectedBossType) return;
+    
+    stompClient.publish({
+      destination: `/app/boss/channel.memo`,
+      body: JSON.stringify({
+        bossType: selectedBossType,
+        channelId: editingMemo.channelId,
+        memo: memoInput,
+        type: 'CHANNEL_MEMO',
+      }),
+    });
+    
+    setEditingMemo(null);
+    setMemoInput('');
+  };
+
+  const cancelMemoEdit = () => {
+    setEditingMemo(null);
+    setMemoInput('');
+  };
+
+  // 채널 선택/해제
+  const toggleChannelSelection = (channelId: string) => {
+    if (!isSelectionMode) return;
+    
+    setSelectedChannels(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(channelId)) {
+        newSet.delete(channelId);
+      } else {
+        newSet.add(channelId);
+      }
+      return newSet;
+    });
+  };
+
+  // 선택 모드 토글
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(prev => !prev);
+    if (isSelectionMode) {
+      setSelectedChannels(new Set());
     }
   };
 
-  const sendMessage = () => {
-    if (stompClient && inputMessage.trim()) {
+  // 전체 선택/해제
+  const toggleSelectAll = () => {
+    const allChannels = getCurrentBossChannels();
+    if (selectedChannels.size === allChannels.length) {
+      setSelectedChannels(new Set());
+    } else {
+      setSelectedChannels(new Set(allChannels));
+    }
+  };
+
+  // 선택된 채널들 삭제
+  const deleteSelectedChannels = () => {
+    if (!stompClient || selectedChannels.size === 0) return;
+    if (!confirm(`선택한 ${selectedChannels.size}개의 채널을 삭제하시겠습니까?`)) return;
+    
+    selectedChannels.forEach(channelId => {
       stompClient.publish({
-        destination: '/app/chat.sendMessage',
+        destination: '/app/boss/channel.delete',
         body: JSON.stringify({
-          sender: username,
-          type: 'CHAT',
-          content: inputMessage,
+          channelId,
+          type: 'CHANNEL_DELETE',
         }),
       });
-      setInputMessage('');
-    }
+    });
+    
+    setSelectedChannels(new Set());
+    setIsSelectionMode(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+  const getChannelState = (channelId: string): ChannelState => {
+    return channelStates[selectedBossType]?.[channelId] || {};
   };
+
+  const getChannelStatusColor = (channelId: string): string => {
+    const state = getChannelState(channelId);
+    if (state.status) {
+      const colorObj = STATUS_COLORS.find(c => c.name === state.status);
+      return colorObj?.value || '#ffffff';
+    }
+    return '#ffffff';
+  };
+
+  const getCurrentBossChannels = (): string[] => {
+    const firstBossType = Object.keys(bossChannels)[0];
+    const channels = firstBossType ? (bossChannels[firstBossType] || []) : [];
+    // 채널명(숫자) 순서로 정렬
+    return [...channels].sort((a, b) => {
+      const numA = parseInt(a, 10) || 0;
+      const numB = parseInt(b, 10) || 0;
+      return numA - numB;
+    });
+  };
+
+  const handleAddChannels = (channels: string[]) => {
+    if (!stompClient || channels.length === 0) return;
+    
+    channels.forEach(channelId => {
+      stompClient.publish({
+        destination: '/app/boss/channel.create',
+        body: JSON.stringify({
+          channelId,
+          type: 'CHANNEL_CREATE',
+        }),
+      });
+    });
+  };
+
+  if (!isConnected) {
+    return (
+      <div className="app">
+        <div className="loading-container">
+          <h2>연결 중...</h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
-      <div className="chat-container">
-        <div className="chat-header">
-          <h1>WebSocket Chat</h1>
-          {!isConnected ? (
-            <div className="login-form">
-              <input
-                type="text"
-                placeholder="사용자 이름을 입력하세요"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && connect()}
-                disabled={isConnected}
-              />
-              <button onClick={connect}>연결</button>
-            </div>
-          ) : (
-            <div className="connection-info">
-              <span className="status connected">연결됨</span>
-              <span className="username">{username}</span>
-              <button onClick={disconnect}>연결 끊기</button>
-            </div>
-          )}
+      <div className="boss-raid-container">
+        {/* 헤더 */}
+        <div className="boss-raid-header">
+          <h1>{selectedBossType} 레이드</h1>
+          <div className="connection-status">연결됨</div>
         </div>
 
-        {isConnected && (
-          <>
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-              <div className="users-sidebar">
-                <h3>접속자 ({activeUsers.length})</h3>
-                <ul className="users-list">
-                  {activeUsers.map((user, index) => (
-                    <li key={index} className={user === username ? 'current-user' : ''}>
-                      {user === username ? '👤 ' : '👥 '}
-                      {user}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="messages-container">
-              {messages.map((msg, index) => (
-                <div key={index} className={`message ${msg.type === 'JOIN' ? 'system' : ''} ${msg.type === 'BOT' ? 'bot' : ''}`}>
-                  {msg.type === 'JOIN' ? (
-                    <span className="system-message">{msg.content}</span>
-                  ) : msg.type === 'BOT' ? (
-                    <>
-                      <span className="bot-sender">🤖 {msg.sender}:</span>
-                      <span className="bot-content">{msg.content}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="sender">{msg.sender}:</span>
-                      <span className="content">{msg.content}</span>
-                    </>
-                  )}
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-              </div>
-            </div>
+        {/* 보스 탭 */}
+        <BossTabs 
+          selectedBossType={selectedBossType} 
+          onBossTypeChange={setSelectedBossType} 
+        />
 
-            <div className="input-container">
-              <input
-                type="text"
-                placeholder="메시지를 입력하세요..."
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-              <button onClick={sendMessage}>전송</button>
+        {/* 채널 설정 섹션 */}
+        <ChannelSettingsSection
+          newChannelId={newChannelId}
+          onChannelIdChange={setNewChannelId}
+          onCreateChannel={createChannel}
+          onOpenImageModal={() => setShowImageModal(true)}
+          isSelectionMode={isSelectionMode}
+          selectedCount={selectedChannels.size}
+          totalCount={getCurrentBossChannels().length}
+          onToggleSelectionMode={toggleSelectionMode}
+          onToggleSelectAll={toggleSelectAll}
+          onDeleteSelected={deleteSelectedChannels}
+        />
+
+        {/* 채널 목록 섹션 */}
+        <div className="channel-list-section">
+          <div className="channel-list-header">
+            <h2>채널 목록</h2>
+            <div className="channel-list-header-right">
+              <StatusLegend />
             </div>
-          </>
-        )}
+          </div>
+
+          {/* 채널 그리드 */}
+          <div className="channel-grid">
+            {getCurrentBossChannels().map((channelId) => {
+              const channelState = getChannelState(channelId);
+              const statusColor = getChannelStatusColor(channelId);
+              const isEditing = editingMemo?.channelId === channelId;
+              const isSelected = selectedChannels.has(channelId);
+              
+              return (
+                <ChannelBlock
+                  key={channelId}
+                  channelId={channelId}
+                  channelState={channelState}
+                  statusColor={statusColor}
+                  isEditing={isEditing}
+                  isSelected={isSelected}
+                  isSelectionMode={isSelectionMode}
+                  memoInput={memoInput}
+                  onMemoInputChange={setMemoInput}
+                  onStartMemoEdit={() => startMemoEdit(channelId)}
+                  onSaveMemo={saveMemo}
+                  onCancelMemoEdit={cancelMemoEdit}
+                  onStatusChange={(status) => handleChannelStatus(channelId, status)}
+                  onToggleSelection={() => toggleChannelSelection(channelId)}
+                />
+              );
+            })}
+          </div>
+        </div>
       </div>
+
+      {/* 이미지 추가 모달 */}
+      <ImageAddModal
+        isOpen={showImageModal}
+        existingChannels={getCurrentBossChannels()}
+        onClose={() => setShowImageModal(false)}
+        onAddChannels={handleAddChannels}
+      />
     </div>
   );
 }
 
 export default App;
-
