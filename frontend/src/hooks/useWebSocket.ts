@@ -127,6 +127,7 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
               status: data.status !== undefined ? data.status : prevState.status,
               memo: data.memo !== undefined ? data.memo : prevState.memo,
               dragonColors: prevState.dragonColors || {},
+              hydraStates: prevState.hydraStates || {},
             };
             
             // 용 색상 업데이트
@@ -134,6 +135,18 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
               newState.dragonColors = {
                 ...newState.dragonColors,
                 [data.dragonType]: data.color,
+              };
+            }
+            
+            // 수화룡 시간 업데이트
+            if (data.hydraType && data.caughtTime && data.spawnTime) {
+              newState.hydraStates = {
+                ...newState.hydraStates,
+                [data.hydraType]: {
+                  caughtTime: data.caughtTime,
+                  spawnTime: data.spawnTime,
+                  spawnMinutes: data.spawnMinutes || newState.hydraStates[data.hydraType]?.spawnMinutes,
+                },
               };
             }
             

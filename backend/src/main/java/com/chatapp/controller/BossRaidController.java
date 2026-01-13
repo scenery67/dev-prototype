@@ -184,6 +184,46 @@ public class BossRaidController {
     }
 
     /**
+     * 수화룡 시간 업데이트
+     */
+    @MessageMapping("/boss/hydra.time")
+    public void handleHydraTime(BossRaidMessage message) {
+        String bossType = message.getBossType();
+        String channelId = message.getChannelId();
+        String hydraType = message.getHydraType();
+        String caughtTime = message.getCaughtTime();
+        Long spawnTime = message.getSpawnTime();
+        
+        if (channelId == null || bossType == null || hydraType == null || caughtTime == null || spawnTime == null) return;
+        
+        // 서버 메모리에 상태 저장
+        stateService.updateHydraTime(bossType, channelId, hydraType, caughtTime, spawnTime);
+        
+        // 실시간 브로드캐스트
+        message.setType(BossRaidMessage.MessageType.STATE_CHANGE);
+        messagingTemplate.convertAndSend("/topic/boss-raid/channel-state/" + bossType, message);
+    }
+
+    /**
+     * 수화룡 젠 시간 설정 업데이트
+     */
+    @MessageMapping("/boss/hydra.spawn-settings")
+    public void handleHydraSpawnSettings(BossRaidMessage message) {
+        String channelId = message.getChannelId();
+        String hydraType = message.getHydraType();
+        Integer spawnMinutes = message.getSpawnMinutes();
+        
+        if (channelId == null || hydraType == null || spawnMinutes == null) return;
+        
+        // 서버 메모리에 설정 저장
+        stateService.updateHydraSpawnSettings(channelId, hydraType, spawnMinutes);
+        
+        // 실시간 브로드캐스트
+        message.setType(BossRaidMessage.MessageType.STATE_CHANGE);
+        messagingTemplate.convertAndSend("/topic/boss-raid/channel-state/수화룡", message);
+    }
+
+    /**
      * 새 사용자 접속 시 전체 상태 동기화
      */
     @MessageMapping("/boss/sync")

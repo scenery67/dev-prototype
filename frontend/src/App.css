@@ -473,6 +473,120 @@
   }
 }
 
+/* 수화룡 섹션 */
+.hydra-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.hydra-section {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f9f9f9;
+}
+
+.hydra-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.hydra-section-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hydra-spawn-minutes {
+  font-size: 12px;
+  color: #666;
+}
+
+.hydra-buttons {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.hydra-time-input-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.btn-hydra-caught,
+.btn-hydra-5min,
+.btn-hydra-time-input {
+  flex: 1;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.btn-hydra-caught:hover,
+.btn-hydra-5min:hover,
+.btn-hydra-time-input:hover {
+  background: #f0f0f0;
+}
+
+.btn-hydra-caught:disabled,
+.btn-hydra-5min:disabled,
+.btn-hydra-time-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hydra-time-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.hydra-time-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.hydra-time-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.hydra-time-value {
+  color: #333;
+  font-weight: 600;
+}
+
+.hydra-time-value.spawned {
+  color: #f44336;
+  font-weight: 700;
+}
+
+.hydra-time-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.hydra-time-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
 /* 반응형 디자인 */
 @media (max-width: 1400px) {
   .channel-grid {

@@ -85,6 +85,32 @@ function App() {
     });
   };
 
+  const handleHydraTimeUpdate = (channelId: string, hydraType: string, caughtTime: string, spawnTime: number): void => {
+    if (!stompClient || !selectedBossType || isSelectionMode) return;
+    
+    stompClient.publish({
+      destination: `/app/boss/hydra.time`,
+      body: JSON.stringify({
+        bossType: selectedBossType,
+        channelId,
+        hydraType,
+        caughtTime,
+        spawnTime,
+        type: 'HYDRA_TIME',
+      }),
+    });
+  };
+
+  // 수화룡 젠 시간 설정 (채널별로 관리, 기본값: 수룡 35분, 화룡 37분)
+  const getHydraSpawnSettings = (channelId: string): { 수룡: number; 화룡: number } => {
+    // TODO: 서버에서 설정을 가져오도록 수정 필요
+    // 현재는 기본값 반환
+    return {
+      수룡: 35,
+      화룡: 37,
+    };
+  };
+
   const startMemoEdit = (channelId: string) => {
     if (isSelectionMode) return;
     const currentMemo = channelStates[selectedBossType]?.[channelId]?.memo || '';
@@ -241,6 +267,8 @@ function App() {
           onToggleSelectionMode={toggleSelectionMode}
           onToggleSelectAll={toggleSelectAll}
           onDeleteSelected={deleteSelectedChannels}
+          selectedBossType={selectedBossType}
+          stompClient={stompClient}
         />
 
         {/* 채널 목록 섹션 */}
@@ -277,6 +305,8 @@ function App() {
                   onCancelMemoEdit={cancelMemoEdit}
                   onStatusChange={(status) => handleChannelStatus(channelId, status)}
                   onDragonColorChange={(dragonType: string, color: string) => handleDragonColor(channelId, dragonType, color)}
+                  onHydraTimeUpdate={(hydraType: string, caughtTime: string, spawnTime: number) => handleHydraTimeUpdate(channelId, hydraType, caughtTime, spawnTime)}
+                  hydraSpawnSettings={getHydraSpawnSettings(channelId)}
                   onToggleSelection={() => toggleChannelSelection(channelId)}
                 />
               );

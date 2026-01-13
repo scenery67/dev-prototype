@@ -26,6 +26,10 @@ public class BossRaidStateService {
     // 카드인덱스는 "0", "1", "2", "3", "4" 문자열로 저장
     private final ConcurrentHashMap<String, Map<String, Map<String, BossRaidMessage.BossCardState>>> 
         bossCardStates = new ConcurrentHashMap<>();
+    
+    // 수화룡 젠 시간 설정: Map<채널ID, Map<수화룡타입, 분>>
+    private final ConcurrentHashMap<String, Map<String, Integer>> hydraSpawnSettings = 
+        new ConcurrentHashMap<>();
 
     /**
      * 채널 생성 (모든 보스에 공통 적용)
@@ -40,12 +44,38 @@ public class BossRaidStateService {
             // 채널 상태 초기화
             Map<String, BossRaidMessage.ChannelState> bossChannels = 
                 bossChannelStates.computeIfAbsent(bossType, k -> new ConcurrentHashMap<>());
-            bossChannels.put(channelId, new BossRaidMessage.ChannelState());
+            BossRaidMessage.ChannelState channelState = new BossRaidMessage.ChannelState();
+            
+            // 수화룡 레이드인 경우 수화룡 상태 초기화
+            if ("수화룡".equals(bossType)) {
+                Map<String, BossRaidMessage.HydraState> hydraStates = new ConcurrentHashMap<>();
+                // 기본 젠 시간 설정 (수룡: 35분, 화룡: 37분)
+                Map<String, Integer> spawnSettings = hydraSpawnSettings.computeIfAbsent(channelId, k -> new ConcurrentHashMap<>());
+                Integer suSpawnMinutes = spawnSettings.getOrDefault("수룡", 35);
+                Integer hwaSpawnMinutes = spawnSettings.getOrDefault("화룡", 37);
+                
+                BossRaidMessage.HydraState suState = new BossRaidMessage.HydraState();
+                suState.setSpawnMinutes(suSpawnMinutes);
+                hydraStates.put("수룡", suState);
+                
+                BossRaidMessage.HydraState hwaState = new BossRaidMessage.HydraState();
+                hwaState.setSpawnMinutes(hwaSpawnMinutes);
+                hydraStates.put("화룡", hwaState);
+                
+                channelState.setHydraStates(hydraStates);
+            }
+            
+            bossChannels.put(channelId, channelState);
             
             // 카드 상태 초기화
             bossCardStates.computeIfAbsent(bossType, k -> new ConcurrentHashMap<>())
                 .put(channelId, new ConcurrentHashMap<>());
         }
+        
+        // 수화룡 젠 시간 설정 초기화 (채널 생성 시 기본값 설정)
+        Map<String, Integer> spawnSettings = hydraSpawnSettings.computeIfAbsent(channelId, k -> new ConcurrentHashMap<>());
+        spawnSettings.putIfAbsent("수룡", 35);
+        spawnSettings.putIfAbsent("화룡", 37);
     }
 
     /**
@@ -94,6 +124,81 @@ public class BossRaidStateService {
     }
 
     /**
+     * 수화룡 시간 업데이트
+     */
+    public void updateHydraTime(String bossType, String channelId, String hydraType, String caughtTime, Long spawnTime) {
+        Map<String, BossRaidMessage.ChannelState> bossChannels = 
+            bossChannelStates.computeIfAbsent(bossType, k -> new ConcurrentHashMap<>());
+        BossRaidMessage.ChannelState channelState = 
+            bossChannels.computeIfAbsent(channelId, k -> new BossRaidMessage.ChannelState());
+        
+        // 수화룡 상태 맵 초기화
+        if (channelState.getHydraStates() == null) {
+            channelState.setHydraStates(new ConcurrentHashMap<>());
+        }
+        
+        // 수화룡 상태 가져오기 또는 생성
+        BossRaidMessage.HydraState hydraState = channelState.getHydraStates().computeIfAbsent(
+            hydraType, k -> {
+                BossRaidMessage.HydraState newState = new BossRaidMessage.HydraState();
+                // 기본 젠 시간 설정 가져오기
+                Map<String, Integer> spawnSettings = hydraSpawnSettings.getOrDefault(channelId, new ConcurrentHashMap<>());
+                Integer spawnMinutes = spawnSettings.getOrDefault(hydraType, hydraType.equals("수룡") ? 35 : 37);
+                newState.setSpawnMinutes(spawnMinutes);
+                return newState;
+            }
+        );
+        
+        // 시간 업데이트
+        hydraState.setCaughtTime(caughtTime);
+        hydraState.setSpawnTime(spawnTime);
+    }
+
+    /**
+     * 수화룡 젠 시간 설정 업데이트
+     */
+    public void updateHydraSpawnSettings(String channelId, String hydraType, Integer spawnMinutes) {
+        Map<String, Integer> spawnSettings = hydraSpawnSettings.computeIfAbsent(channelId, k -> new ConcurrentHashMap<>());
+        spawnSettings.put(hydraType, spawnMinutes);
+        
+        // 해당 채널의 모든 수화룡 상태의 젠 시간 설정도 업데이트
+        Map<String, BossRaidMessage.ChannelState> bossChannels = bossChannelStates.get("수화룡");
+        if (bossChannels != null) {
+            BossRaidMessage.ChannelState channelState = bossChannels.get(channelId);
+            if (channelState != null && channelState.getHydraStates() != null) {
+                BossRaidMessage.HydraState hydraState = channelState.getHydraStates().get(hydraType);
+                if (hydraState != null) {
+                    hydraState.setSpawnMinutes(spawnMinutes);
+                    // 이미 잡힌 시간이 있으면 젠 예정 시간 재계산
+                    if (hydraState.getCaughtTime() != null && hydraState.getSpawnTime() != null) {
+                        // 잡힌 시간에서 새로운 젠 시간만큼 더하기
+                        try {
+                            java.time.LocalDateTime caughtDateTime = java.time.LocalDateTime.parse(hydraState.getCaughtTime());
+                            java.time.LocalDateTime newSpawnTime = caughtDateTime.plusMinutes(spawnMinutes);
+                            hydraState.setSpawnTime(newSpawnTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
+                        } catch (Exception e) {
+                            // 파싱 실패 시 무시
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 수화룡 젠 시간 설정 가져오기
+     */
+    public Map<String, Integer> getHydraSpawnSettings(String channelId) {
+        Map<String, Integer> settings = hydraSpawnSettings.get(channelId);
+        if (settings == null) {
+            settings = new HashMap<>();
+            settings.put("수룡", 35);
+            settings.put("화룡", 37);
+        }
+        return new HashMap<>(settings);
+    }
+
+    /**
      * 채널 메모 업데이트 (보스별)
      */
     public void updateChannelMemo(String bossType, String channelId, String memo) {
@@ -131,6 +236,18 @@ public class BossRaidStateService {
             if (state.getDragonColors() != null) {
                 copiedState.setDragonColors(new HashMap<>(state.getDragonColors()));
             }
+            // 수화룡 상태 복사
+            if (state.getHydraStates() != null) {
+                Map<String, BossRaidMessage.HydraState> copiedHydraStates = new HashMap<>();
+                state.getHydraStates().forEach((type, hydraState) -> {
+                    BossRaidMessage.HydraState copiedHydraState = new BossRaidMessage.HydraState();
+                    copiedHydraState.setCaughtTime(hydraState.getCaughtTime());
+                    copiedHydraState.setSpawnTime(hydraState.getSpawnTime());
+                    copiedHydraState.setSpawnMinutes(hydraState.getSpawnMinutes());
+                    copiedHydraStates.put(type, copiedHydraState);
+                });
+                copiedState.setHydraStates(copiedHydraStates);
+            }
             result.put(channelId, copiedState);
         }
         
@@ -165,6 +282,22 @@ public class BossRaidStateService {
                 BossRaidMessage.ChannelState copiedState = new BossRaidMessage.ChannelState();
                 copiedState.setStatus(state.getStatus());
                 copiedState.setMemo(state.getMemo());
+                // 용 색상 복사
+                if (state.getDragonColors() != null) {
+                    copiedState.setDragonColors(new HashMap<>(state.getDragonColors()));
+                }
+                // 수화룡 상태 복사
+                if (state.getHydraStates() != null) {
+                    Map<String, BossRaidMessage.HydraState> copiedHydraStates = new HashMap<>();
+                    state.getHydraStates().forEach((type, hydraState) -> {
+                        BossRaidMessage.HydraState copiedHydraState = new BossRaidMessage.HydraState();
+                        copiedHydraState.setCaughtTime(hydraState.getCaughtTime());
+                        copiedHydraState.setSpawnTime(hydraState.getSpawnTime());
+                        copiedHydraState.setSpawnMinutes(hydraState.getSpawnMinutes());
+                        copiedHydraStates.put(type, copiedHydraState);
+                    });
+                    copiedState.setHydraStates(copiedHydraStates);
+                }
                 copiedBossChannels.put(channelId, copiedState);
             }
             

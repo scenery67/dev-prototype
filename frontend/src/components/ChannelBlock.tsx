@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { ChannelState, StatusColor } from '../types';
 import { STATUS_COLORS, DRAGON_TYPES } from '../constants/boss';
+import HydraSection from './HydraSection';
 
 interface ChannelBlockProps {
   channelId: string;
@@ -17,6 +18,8 @@ interface ChannelBlockProps {
   onCancelMemoEdit: () => void;
   onStatusChange: (status: string) => void;
   onDragonColorChange?: (dragonType: string, color: string) => void;
+  onHydraTimeUpdate?: (hydraType: string, caughtTime: string, spawnTime: number) => void;
+  hydraSpawnSettings?: { 수룡: number; 화룡: number };
   onToggleSelection: () => void;
 }
 
@@ -35,12 +38,15 @@ export default function ChannelBlock({
   onCancelMemoEdit,
   onStatusChange,
   onDragonColorChange,
+  onHydraTimeUpdate,
+  hydraSpawnSettings,
   onToggleSelection,
 }: ChannelBlockProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedDragonType, setSelectedDragonType] = useState<string | null>(null);
   const hasStatus = channelState.status !== undefined && channelState.status !== null;
   const isDragonBoss = selectedBossType === '용';
+  const isHydraBoss = selectedBossType === '수화룡';
   
   // 메모 편집 모드로 전환될 때 자동으로 포커스
   useEffect(() => {
@@ -123,124 +129,157 @@ export default function ChannelBlock({
         채널 {channelId}
       </div>
       
-      {/* 메모 입력 */}
-      {isEditing ? (
-        <div className="channel-memo-edit">
-          <textarea
-            ref={textareaRef}
-            value={memoInput}
-            onChange={(e) => onMemoInputChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                onSaveMemo();
-              }
-              // Shift+Enter는 기본 동작(줄바꿈) 유지
-            }}
-            className="channel-memo-textarea"
-            placeholder="메모(Enter: 저장, Shift+Enter: 줄바꿈)"
-          />
-          <div className="channel-memo-buttons">
-            <button onClick={onSaveMemo} className="btn-save-small">저장</button>
-            <button onClick={onCancelMemoEdit} className="btn-cancel-small">취소</button>
-          </div>
-        </div>
-      ) : (
-        <div
-          className={`channel-memo-display ${isSelectionMode ? 'disabled' : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!isSelectionMode) {
-              onStartMemoEdit();
-            }
-          }}
-        >
-          {channelState.memo ? (
-            <span style={{ whiteSpace: 'pre-wrap' }}>{channelState.memo}</span>
+      {/* 메모 및 상태 버튼 (수화룡이 아닐 때만) */}
+      {!isHydraBoss && (
+        <>
+          {/* 메모 입력 */}
+          {isEditing ? (
+            <div className="channel-memo-edit">
+              <textarea
+                ref={textareaRef}
+                value={memoInput}
+                onChange={(e) => onMemoInputChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    onSaveMemo();
+                  }
+                  // Shift+Enter는 기본 동작(줄바꿈) 유지
+                }}
+                className="channel-memo-textarea"
+                placeholder="메모(Enter: 저장, Shift+Enter: 줄바꿈)"
+              />
+              <div className="channel-memo-buttons">
+                <button onClick={onSaveMemo} className="btn-save-small">저장</button>
+                <button onClick={onCancelMemoEdit} className="btn-cancel-small">취소</button>
+              </div>
+            </div>
           ) : (
-            '메모(Enter: 저장, Shift+Enter: 줄바꿈)'
-          )}
-        </div>
-      )}
-      
-      {/* 용 타입 버튼들 (용 레이드일 때만) */}
-      {isDragonBoss && (
-        <div className="channel-dragon-buttons">
-          {DRAGON_TYPES.map((dragonType: string) => {
-            const dragonColor = getDragonColor(dragonType);
-            const isSelected = selectedDragonType === dragonType;
-            const colorObj = dragonColor ? STATUS_COLORS.find(c => c.name === dragonColor) : null;
-            
-            return (
-              <button
-                key={dragonType}
-                className={`dragon-type-btn ${isSelected ? 'selected' : ''}`}
-                style={{
-                  backgroundColor: colorObj?.value || '#f5f5f5',
-                  borderColor: isSelected ? '#333' : 'rgba(0, 0, 0, 0.2)',
-                  borderWidth: isSelected ? '2px' : '1px',
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDragonTypeClick(dragonType);
-                }}
-                title={dragonType}
-              >
-                {dragonType}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* 상태 버튼들 */}
-      <div className="channel-status-buttons">
-        {STATUS_COLORS.map((color: StatusColor) => {
-          // 용 레이드일 때는 선택된 용 타입의 색상과 비교
-          let isActive = false;
-          if (isDragonBoss && selectedDragonType) {
-            const dragonColor = getDragonColor(selectedDragonType);
-            isActive = dragonColor === color.name;
-          } else {
-            isActive = channelState.status === color.name;
-          }
-          
-          return (
-            <button
-              key={color.name}
-              className={`status-btn status-btn-${color.name} ${isActive ? 'active' : ''}`}
-              style={{ 
-                backgroundColor: color.value,
-                borderColor: isActive ? '#333' : 'rgba(0, 0, 0, 0.2)',
-              }}
+            <div
+              className={`channel-memo-display ${isSelectionMode ? 'disabled' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
-                handleColorClick(color.name);
+                if (!isSelectionMode) {
+                  onStartMemoEdit();
+                }
               }}
-              title={color.label}
             >
-              {isActive && (
-                <svg 
-                  width="14" 
-                  height="14" 
-                  viewBox="0 0 16 16" 
-                  fill="none" 
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="check-icon"
-                >
-                  <path 
-                    d="M13.5 4L6 11.5L2.5 8" 
-                    stroke="#fff" 
-                    strokeWidth="2.5" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  />
-                </svg>
+              {channelState.memo ? (
+                <span style={{ whiteSpace: 'pre-wrap' }}>{channelState.memo}</span>
+              ) : (
+                '메모(Enter: 저장, Shift+Enter: 줄바꿈)'
               )}
-            </button>
-          );
-        })}
-      </div>
+            </div>
+          )}
+
+          {/* 용 타입 버튼들 (용 레이드일 때만) */}
+          {isDragonBoss && (
+            <div className="channel-dragon-buttons">
+              {DRAGON_TYPES.map((dragonType: string) => {
+                const dragonColor = getDragonColor(dragonType);
+                const isSelected = selectedDragonType === dragonType;
+                const colorObj = dragonColor ? STATUS_COLORS.find(c => c.name === dragonColor) : null;
+                
+                return (
+                  <button
+                    key={dragonType}
+                    className={`dragon-type-btn ${isSelected ? 'selected' : ''}`}
+                    style={{
+                      backgroundColor: colorObj?.value || '#f5f5f5',
+                      borderColor: isSelected ? '#333' : 'rgba(0, 0, 0, 0.2)',
+                      borderWidth: isSelected ? '2px' : '1px',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDragonTypeClick(dragonType);
+                    }}
+                    title={dragonType}
+                  >
+                    {dragonType}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 상태 버튼들 */}
+          <div className="channel-status-buttons">
+            {STATUS_COLORS.map((color: StatusColor) => {
+              // 용 레이드일 때는 선택된 용 타입의 색상과 비교
+              let isActive = false;
+              if (isDragonBoss && selectedDragonType) {
+                const dragonColor = getDragonColor(selectedDragonType);
+                isActive = dragonColor === color.name;
+              } else {
+                isActive = channelState.status === color.name;
+              }
+              
+              return (
+                <button
+                  key={color.name}
+                  className={`status-btn status-btn-${color.name} ${isActive ? 'active' : ''}`}
+                  style={{ 
+                    backgroundColor: color.value,
+                    borderColor: isActive ? '#333' : 'rgba(0, 0, 0, 0.2)',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleColorClick(color.name);
+                  }}
+                  title={color.label}
+                >
+                  {isActive && (
+                    <svg 
+                      width="14" 
+                      height="14" 
+                      viewBox="0 0 16 16" 
+                      fill="none" 
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="check-icon"
+                    >
+                      <path 
+                        d="M13.5 4L6 11.5L2.5 8" 
+                        stroke="#fff" 
+                        strokeWidth="2.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* 수화룡 섹션 (수화룡 레이드일 때만) */}
+      {isHydraBoss && (
+        <div className="hydra-sections">
+          <HydraSection
+            hydraType="수룡"
+            hydraState={channelState.hydraStates?.['수룡']}
+            spawnMinutes={hydraSpawnSettings?.수룡 ?? 35}
+            onTimeUpdate={(hydraType: string, caughtTime: string, spawnTime: number) => {
+              if (onHydraTimeUpdate) {
+                onHydraTimeUpdate(hydraType, caughtTime, spawnTime);
+              }
+            }}
+            isSelectionMode={isSelectionMode}
+          />
+          <HydraSection
+            hydraType="화룡"
+            hydraState={channelState.hydraStates?.['화룡']}
+            spawnMinutes={hydraSpawnSettings?.화룡 ?? 37}
+            onTimeUpdate={(hydraType: string, caughtTime: string, spawnTime: number) => {
+              if (onHydraTimeUpdate) {
+                onHydraTimeUpdate(hydraType, caughtTime, spawnTime);
+              }
+            }}
+            isSelectionMode={isSelectionMode}
+          />
+        </div>
+      )}
     </div>
   );
 }

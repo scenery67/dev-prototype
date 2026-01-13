@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ChannelAddInput from './ChannelAddInput';
 import ChannelSelectionControls from './ChannelSelectionControls';
+import HydraSpawnSettings from './HydraSpawnSettings';
 
 interface ChannelSettingsSectionProps {
   newChannelId: string;
@@ -13,6 +14,8 @@ interface ChannelSettingsSectionProps {
   onToggleSelectionMode: () => void;
   onToggleSelectAll: () => void;
   onDeleteSelected: () => void;
+  selectedBossType: string;
+  stompClient: any;
 }
 
 export default function ChannelSettingsSection({
@@ -26,6 +29,8 @@ export default function ChannelSettingsSection({
   onToggleSelectionMode,
   onToggleSelectAll,
   onDeleteSelected,
+  selectedBossType,
+  stompClient,
 }: ChannelSettingsSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasNoChannels = totalCount === 0;
@@ -66,6 +71,18 @@ export default function ChannelSettingsSection({
               onDeleteSelected={onDeleteSelected}
             />
           </div>
+        </div>
+      )}
+
+      {/* 수화룡 젠 시간 설정 (수화룡 레이드일 때만) */}
+      {selectedBossType === '수화룡' && (
+        <div className="hydra-spawn-settings-section">
+          <HydraSpawnSettings
+            onSpawnSettingsUpdate={(hydraType, spawnMinutes) => {
+              // 설정 업데이트 처리
+            }}
+            stompClient={stompClient}
+          />
         </div>
       )}
     </div>

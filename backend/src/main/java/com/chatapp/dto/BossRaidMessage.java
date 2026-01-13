@@ -17,6 +17,12 @@ public class BossRaidMessage {
     private Integer cardIndex; // 카드 인덱스 (0-4)
     private String dragonType; // 용 타입: "흑", "진", "묵", "감"
     
+    // 수화룡 레이드용
+    private String hydraType; // 수화룡 타입: "수룡", "화룡"
+    private String caughtTime; // 잡힌 시간 (ISO 8601 형식 또는 "HHmm" 형식)
+    private Long spawnTime; // 젠 예정 시간 (타임스탬프)
+    private Integer spawnMinutes; // 젠 시간 (분) - 설정값
+    
     // 전체 상태 동기화용
     private Map<String, Map<String, ChannelState>> fullState; // 보스타입 -> 채널ID -> 상태
     
@@ -41,6 +47,8 @@ public class BossRaidMessage {
         BOSS_CHECK,        // 보스 체크 상태 변경
         BOSS_COLOR,        // 보스 카드 색상 변경
         BOSS_MEMO,         // 보스 카드 메모 변경
+        HYDRA_TIME,        // 수화룡 시간 업데이트
+        HYDRA_SPAWN_SETTINGS, // 수화룡 젠 시간 설정 업데이트
         
         // 상태 동기화
         STATE_SYNC,        // 전체 상태 동기화 (새 사용자용)
@@ -127,6 +135,38 @@ public class BossRaidMessage {
         this.dragonType = dragonType;
     }
 
+    public String getHydraType() {
+        return hydraType;
+    }
+
+    public void setHydraType(String hydraType) {
+        this.hydraType = hydraType;
+    }
+
+    public String getCaughtTime() {
+        return caughtTime;
+    }
+
+    public void setCaughtTime(String caughtTime) {
+        this.caughtTime = caughtTime;
+    }
+
+    public Long getSpawnTime() {
+        return spawnTime;
+    }
+
+    public void setSpawnTime(Long spawnTime) {
+        this.spawnTime = spawnTime;
+    }
+
+    public Integer getSpawnMinutes() {
+        return spawnMinutes;
+    }
+
+    public void setSpawnMinutes(Integer spawnMinutes) {
+        this.spawnMinutes = spawnMinutes;
+    }
+
     public Map<String, Map<String, ChannelState>> getFullState() {
         return fullState;
     }
@@ -168,6 +208,9 @@ public class BossRaidMessage {
         private Boolean moving; // 이동중 표시 여부
         // 용 레이드용 색상 상태: Map<용타입, 색상>
         private Map<String, String> dragonColors; // "흑" -> "gray", "진" -> "green" 등
+        
+        // 수화룡 레이드용 상태: Map<수화룡타입, 상태>
+        private Map<String, HydraState> hydraStates; // "수룡" -> HydraState, "화룡" -> HydraState
 
         public String getStatus() {
             return status;
@@ -199,6 +242,47 @@ public class BossRaidMessage {
 
         public void setDragonColors(Map<String, String> dragonColors) {
             this.dragonColors = dragonColors;
+        }
+
+        public Map<String, HydraState> getHydraStates() {
+            return hydraStates;
+        }
+
+        public void setHydraStates(Map<String, HydraState> hydraStates) {
+            this.hydraStates = hydraStates;
+        }
+    }
+
+    /**
+     * 수화룡 상태 내부 클래스
+     */
+    public static class HydraState {
+        private String caughtTime; // 잡힌 시간 (ISO 8601 형식)
+        private Long spawnTime; // 젠 예정 시간 (타임스탬프)
+        private Integer spawnMinutes; // 젠 시간 설정 (분)
+
+        public String getCaughtTime() {
+            return caughtTime;
+        }
+
+        public void setCaughtTime(String caughtTime) {
+            this.caughtTime = caughtTime;
+        }
+
+        public Long getSpawnTime() {
+            return spawnTime;
+        }
+
+        public void setSpawnTime(Long spawnTime) {
+            this.spawnTime = spawnTime;
+        }
+
+        public Integer getSpawnMinutes() {
+            return spawnMinutes;
+        }
+
+        public void setSpawnMinutes(Integer spawnMinutes) {
+            this.spawnMinutes = spawnMinutes;
         }
     }
 
