@@ -9,3 +9,6 @@ export const STATUS_COLORS: StatusColor[] = [
   { name: 'orange', label: '5명 이상', value: '#ff9800' },
   { name: 'red', label: '불가능, 잡힌곳', value: '#f44336' },
 ];
+
+// 용 타입
+export const DRAGON_TYPES = ['흑', '진', '묵', '감'] as const;

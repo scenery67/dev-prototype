@@ -164,6 +164,26 @@ public class BossRaidController {
     }
 
     /**
+     * 용 레이드 색상 변경 (용 타입별)
+     */
+    @MessageMapping("/boss/dragon.color")
+    public void handleDragonColor(BossRaidMessage message) {
+        String bossType = message.getBossType();
+        String channelId = message.getChannelId();
+        String dragonType = message.getDragonType();
+        String color = message.getColor();
+        
+        if (channelId == null || bossType == null || dragonType == null || color == null) return;
+        
+        // 서버 메모리에 상태 저장
+        stateService.updateDragonColor(bossType, channelId, dragonType, color);
+        
+        // 실시간 브로드캐스트
+        message.setType(BossRaidMessage.MessageType.STATE_CHANGE);
+        messagingTemplate.convertAndSend("/topic/boss-raid/channel-state/" + bossType, message);
+    }
+
+    /**
      * 새 사용자 접속 시 전체 상태 동기화
      */
     @MessageMapping("/boss/sync")

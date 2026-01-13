@@ -59,12 +59,13 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
               const normalizedState: { [bossType: string]: { [channelId: string]: ChannelState } } = {};
               Object.entries(fullState).forEach(([bossType, channels]) => {
                 normalizedState[bossType] = {};
-                Object.entries(channels).forEach(([channelId, state]) => {
-                  normalizedState[bossType][channelId] = {
-                    status: state?.status || undefined,
-                    memo: state?.memo || undefined,
-                  };
-                });
+                      Object.entries(channels).forEach(([channelId, state]) => {
+                        normalizedState[bossType][channelId] = {
+                          status: state?.status || undefined,
+                          memo: state?.memo || undefined,
+                          dragonColors: state?.dragonColors || undefined,
+                        };
+                      });
               });
               setChannelStates(normalizedState);
             }
@@ -122,10 +123,21 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
               newStates[selectedBossType] = {};
             }
             const prevState = prev[selectedBossType]?.[data.channelId!] || {};
-            newStates[selectedBossType][data.channelId!] = {
+            const newState = {
               status: data.status !== undefined ? data.status : prevState.status,
               memo: data.memo !== undefined ? data.memo : prevState.memo,
+              dragonColors: prevState.dragonColors || {},
             };
+            
+            // 용 색상 업데이트
+            if (data.dragonType && data.color) {
+              newState.dragonColors = {
+                ...newState.dragonColors,
+                [data.dragonType]: data.color,
+              };
+            }
+            
+            newStates[selectedBossType][data.channelId!] = newState;
             return newStates;
           });
         }

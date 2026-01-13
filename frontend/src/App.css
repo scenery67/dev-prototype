@@ -364,6 +364,49 @@
 }
 
 /* 채널 상태 버튼들 */
+/* 용 타입 버튼들 (용 레이드일 때만) */
+.channel-dragon-buttons {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+  flex-wrap: nowrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.dragon-type-btn {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 11px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dragon-type-btn:hover {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.dragon-type-btn.selected {
+  border-color: #333;
+  border-width: 2px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
+}
+
 .channel-status-buttons {
   display: flex;
   gap: 5px;

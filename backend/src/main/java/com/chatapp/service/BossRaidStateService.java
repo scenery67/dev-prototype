@@ -76,6 +76,24 @@ public class BossRaidStateService {
     }
 
     /**
+     * 용 레이드 색상 업데이트 (용 타입별)
+     */
+    public void updateDragonColor(String bossType, String channelId, String dragonType, String color) {
+        Map<String, BossRaidMessage.ChannelState> bossChannels = 
+            bossChannelStates.computeIfAbsent(bossType, k -> new ConcurrentHashMap<>());
+        BossRaidMessage.ChannelState channelState = 
+            bossChannels.computeIfAbsent(channelId, k -> new BossRaidMessage.ChannelState());
+        
+        // 용 색상 맵 초기화
+        if (channelState.getDragonColors() == null) {
+            channelState.setDragonColors(new ConcurrentHashMap<>());
+        }
+        
+        // 용 타입별 색상 업데이트
+        channelState.getDragonColors().put(dragonType, color);
+    }
+
+    /**
      * 채널 메모 업데이트 (보스별)
      */
     public void updateChannelMemo(String bossType, String channelId, String memo) {
@@ -109,6 +127,10 @@ public class BossRaidStateService {
             BossRaidMessage.ChannelState copiedState = new BossRaidMessage.ChannelState();
             copiedState.setStatus(state.getStatus());
             copiedState.setMemo(state.getMemo());
+            // 용 색상 복사
+            if (state.getDragonColors() != null) {
+                copiedState.setDragonColors(new HashMap<>(state.getDragonColors()));
+            }
             result.put(channelId, copiedState);
         }
         

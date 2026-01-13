@@ -15,6 +15,7 @@ public class BossRaidMessage {
     private String color;     // "gray", "green", "yellow", "orange", "red"
     private String memo;      // 메모 내용
     private Integer cardIndex; // 카드 인덱스 (0-4)
+    private String dragonType; // 용 타입: "흑", "진", "묵", "감"
     
     // 전체 상태 동기화용
     private Map<String, Map<String, ChannelState>> fullState; // 보스타입 -> 채널ID -> 상태
@@ -118,6 +119,14 @@ public class BossRaidMessage {
         this.cardIndex = cardIndex;
     }
 
+    public String getDragonType() {
+        return dragonType;
+    }
+
+    public void setDragonType(String dragonType) {
+        this.dragonType = dragonType;
+    }
+
     public Map<String, Map<String, ChannelState>> getFullState() {
         return fullState;
     }
@@ -157,6 +166,8 @@ public class BossRaidMessage {
         private String status; // "gray", "green", "yellow", "orange", "red"
         private String memo;
         private Boolean moving; // 이동중 표시 여부
+        // 용 레이드용 색상 상태: Map<용타입, 색상>
+        private Map<String, String> dragonColors; // "흑" -> "gray", "진" -> "green" 등
 
         public String getStatus() {
             return status;
@@ -180,6 +191,14 @@ public class BossRaidMessage {
 
         public void setMoving(Boolean moving) {
             this.moving = moving;
+        }
+
+        public Map<String, String> getDragonColors() {
+            return dragonColors;
+        }
+
+        public void setDragonColors(Map<String, String> dragonColors) {
+            this.dragonColors = dragonColors;
         }
     }
 

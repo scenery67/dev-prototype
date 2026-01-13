@@ -70,6 +70,21 @@ function App() {
     });
   };
 
+  const handleDragonColor = (channelId: string, dragonType: string, color: string): void => {
+    if (!stompClient || !selectedBossType || isSelectionMode) return;
+    
+    stompClient.publish({
+      destination: `/app/boss/dragon.color`,
+      body: JSON.stringify({
+        bossType: selectedBossType,
+        channelId,
+        dragonType,
+        color,
+        type: 'BOSS_COLOR',
+      }),
+    });
+  };
+
   const startMemoEdit = (channelId: string) => {
     if (isSelectionMode) return;
     const currentMemo = channelStates[selectedBossType]?.[channelId]?.memo || '';
@@ -254,12 +269,14 @@ function App() {
                   isEditing={isEditing}
                   isSelected={isSelected}
                   isSelectionMode={isSelectionMode}
+                  selectedBossType={selectedBossType}
                   memoInput={memoInput}
                   onMemoInputChange={setMemoInput}
                   onStartMemoEdit={() => startMemoEdit(channelId)}
                   onSaveMemo={saveMemo}
                   onCancelMemoEdit={cancelMemoEdit}
                   onStatusChange={(status) => handleChannelStatus(channelId, status)}
+                  onDragonColorChange={(dragonType: string, color: string) => handleDragonColor(channelId, dragonType, color)}
                   onToggleSelection={() => toggleChannelSelection(channelId)}
                 />
               );
