@@ -9,6 +9,7 @@ import ChannelBlock from './components/ChannelBlock';
 import ImageAddModal from './components/ImageAddModal';
 import HydraSpawnAlert from './components/HydraSpawnAlert';
 import HydraImminentSpawn from './components/HydraImminentSpawn';
+import FeedbackDropdown from './components/FeedbackDropdown';
 import './App.css';
 
 function App() {
@@ -283,9 +284,12 @@ function App() {
           selectedBossType={selectedBossType} 
           onBossTypeChange={setSelectedBossType} 
         />
-          <div className="connection-status">
-            <div className="status-indicator status-connected"></div>
-            <span>연결됨</span>
+          <div className="header-right">
+            <FeedbackDropdown isConnected={isConnected} />
+            <div className="connection-status">
+              <div className="status-indicator status-connected"></div>
+              <span>연결됨</span>
+            </div>
           </div>
         </div>
 

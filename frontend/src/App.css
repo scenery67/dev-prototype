@@ -117,6 +117,12 @@
   font-weight: 600;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .connection-status {
   display: flex;
   align-items: center;
