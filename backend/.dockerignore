@@ -1,0 +1,38 @@
+# 빌드 결과물
+build/
+out/
+*.class
+*.jar
+*.war
+
+# IDE 설정
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# 로그 파일
+*.log
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Gradle
+.gradle/
+gradle/wrapper/gradle-wrapper.jar
+
+# 테스트 결과
+test-results/
+reports/
+
+# 임시 파일
+*.tmp
+*.bak
+*.swp
+*~
