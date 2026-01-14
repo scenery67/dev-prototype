@@ -4,14 +4,19 @@ on:
   push:
     branches:
       - deploy
-      - main  # 기본 브랜치에도 추가하여 워크플로우 인식
+      - master  # 기본 브랜치에도 추가하여 워크플로우 인식
     paths:
       - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'  # 워크플로우 파일 변경 시에도 실행
   workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    
+    # GitHub Pages 배포를 위한 권한 설정
+    permissions:
+      contents: write
     
     defaults:
       run:
