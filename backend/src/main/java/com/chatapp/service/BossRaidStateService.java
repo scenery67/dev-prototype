@@ -221,6 +221,17 @@ public class BossRaidStateService {
     }
 
     /**
+     * 특정 채널 상태 가져오기
+     */
+    public BossRaidMessage.ChannelState getChannelState(String bossType, String channelId) {
+        Map<String, BossRaidMessage.ChannelState> bossChannels = bossChannelStates.get(bossType);
+        if (bossChannels == null) {
+            return null;
+        }
+        return bossChannels.get(channelId);
+    }
+
+    /**
      * 보스별 채널 상태 가져오기
      */
     public Map<String, BossRaidMessage.ChannelState> getBossChannelStates(String bossType) {

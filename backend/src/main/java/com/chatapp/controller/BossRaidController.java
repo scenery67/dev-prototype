@@ -147,6 +147,12 @@ public class BossRaidController {
         // 서버 메모리에 상태 저장
         stateService.updateChannelStatus(bossType, channelId, status);
         
+        // 현재 채널 상태를 가져와서 메모 정보 포함
+        BossRaidMessage.ChannelState currentState = stateService.getChannelState(bossType, channelId);
+        if (currentState != null) {
+            message.setMemo(currentState.getMemo());
+        }
+        
         // 실시간 브로드캐스트
         message.setType(BossRaidMessage.MessageType.STATE_CHANGE);
         messagingTemplate.convertAndSend("/topic/boss-raid/channel-state/" + bossType, message);
@@ -188,6 +194,13 @@ public class BossRaidController {
         
         // 서버 메모리에 상태 저장
         stateService.updateDragonColor(bossType, channelId, dragonType, color);
+        
+        // 현재 채널 상태를 가져와서 메모 정보 포함
+        BossRaidMessage.ChannelState currentState = stateService.getChannelState(bossType, channelId);
+        if (currentState != null) {
+            message.setMemo(currentState.getMemo());
+            message.setStatus(currentState.getStatus());
+        }
         
         // 실시간 브로드캐스트
         message.setType(BossRaidMessage.MessageType.STATE_CHANGE);
