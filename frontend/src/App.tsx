@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChannelState } from './types';
 import { STATUS_COLORS } from './constants/boss';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -235,18 +235,38 @@ function App() {
     });
   };
 
+  // 로딩 애니메이션용 점 개수 상태
+  const [loadingDots, setLoadingDots] = useState(1);
+
+  // 점 애니메이션 효과
+  useEffect(() => {
+    if (!isConnected) {
+      const interval = setInterval(() => {
+        setLoadingDots((prev) => (prev >= 3 ? 1 : prev + 1));
+      }, 500); // 0.5초마다 점 개수 변경
+
+      return () => clearInterval(interval);
+    }
+  }, [isConnected]);
+
   if (!isConnected) {
+    const dots = '.'.repeat(loadingDots);
     return (
       <div className="app">
         <div className="loading-container">
           <div className="server-status-card">
             <div className="server-status-header">
               <div className="status-indicator status-disconnected"></div>
-              <h2>서버 연결 중...</h2>
+              <h2>
+                서버 연결 중
+                <span className="loading-dots">{dots}</span>
+              </h2>
             </div>
             <div className="server-status-message">
               <p>무료 서버를 사용 중이므로, 사용자가 없을 시 서버가 자동으로 잠깁니다.</p>
               <p>서버를 깨우는 중이며, 약 2~3분 정도 소요됩니다.</p>
+              <p>2~3분이 지나도 연결이 되지 않는다? 그것은 망할 개발자의 잘못입니다.</p>
+              <p>당장 불평 불만을 토하세요 - 4562sky@naver.com</p>
             </div>
           </div>
         </div>
