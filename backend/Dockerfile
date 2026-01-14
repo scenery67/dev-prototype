@@ -17,6 +17,9 @@ COPY src ./src
 # 애플리케이션 빌드 (bootJar 태스크로 실행 가능한 JAR 생성)
 RUN gradle bootJar --no-daemon -x test
 
+# 빌드된 JAR 파일 확인 (디버깅용)
+RUN ls -la /app/build/libs/
+
 # Stage 2: 실행 스테이지
 FROM eclipse-temurin:21-jre-alpine
 
@@ -25,8 +28,8 @@ WORKDIR /app
 # 헬스체크를 위한 wget 설치
 RUN apk add --no-cache wget
 
-# 빌드된 JAR 파일 복사 (Spring Boot는 bootJar로 실행 가능한 JAR 생성)
-COPY --from=build /app/build/libs/chat-server-*.jar app.jar
+# 빌드된 JAR 파일 복사 (모든 JAR 파일 매칭 - 더 안전함)
+COPY --from=build /app/build/libs/*.jar app.jar
 
 # 포트 노출
 EXPOSE 8080
