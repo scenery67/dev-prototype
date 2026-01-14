@@ -3,12 +3,13 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production' ? '/dev-prototype/' : '/',  // GitHub Pages 경로 설정
   plugins: [react()],
   define: {
     global: 'globalThis',
   },
   server: {
-    host: '0.0.0.0', // 모든 네트워크 인터페이스에서 접근 가능
+    host: '0.0.0.0',
     port: 7000,
     proxy: {
       '/ws': {
@@ -30,4 +31,3 @@ export default defineConfig({
     },
   },
 });
-
