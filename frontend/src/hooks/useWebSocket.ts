@@ -20,12 +20,39 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
     [bossType: string]: { [channelId: string]: ChannelState };
   }>({});
 
+  // 백엔드 URL 가져오기
+  const getBackendUrl = () => {
+    if (import.meta.env.DEV) {
+      return 'http://localhost:8080';
+    } else {
+      return import.meta.env.VITE_WS_URL || `http://${window.location.hostname}:8080`;
+    }
+  };
+
+  // Health check API 호출 (에러는 조용히 처리)
+  const checkServerHealth = async (): Promise<boolean> => {
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // 에러를 조용히 처리하기 위해 signal 추가
+      });
+      return response.ok;
+    } catch (error) {
+      // 에러는 조용히 처리 (콘솔에 출력하지 않음)
+      return false;
+    }
+  };
+
   useEffect(() => {
     const getWebSocketUrl = () => {
       if (import.meta.env.DEV) {
         return '/ws';
       } else {
-        const backendUrl = import.meta.env.VITE_WS_URL || `http://${window.location.hostname}:8080`;
+        const backendUrl = getBackendUrl();
         return `${backendUrl}/ws`;
       }
     };
@@ -127,18 +154,81 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
       onDisconnect: () => {
         setIsConnected(false);
       },
-      onStompError: (frame) => {
-        console.error('STOMP error:', frame);
+      onStompError: () => {
+        // 에러는 조용히 처리 (콘솔에 출력하지 않음)
+        setIsConnected(false);
+      },
+      onWebSocketError: () => {
+        // 에러는 조용히 처리 (콘솔에 출력하지 않음)
+        setIsConnected(false);
       },
     });
 
-    client.activate();
-    setStompClient(client);
+    // WebSocket 연결 시도
+    const connectWebSocket = () => {
+      try {
+        client.activate();
+        setStompClient(client);
+      } catch (error) {
+        // 에러는 조용히 처리 (콘솔에 출력하지 않음)
+        setIsConnected(false);
+      }
+    };
+
+    // 초기 연결 시도
+    connectWebSocket();
 
     return () => {
       client.deactivate();
     };
   }, []);
+
+  // 서버가 연결되지 않았을 때 Health check API를 주기적으로 호출하여 서버 깨우기
+  useEffect(() => {
+    if (isConnected) return; // 이미 연결되어 있으면 중단
+
+    let healthCheckInterval: NodeJS.Timeout | null = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 60; // 최대 5분 (5초 * 60)
+
+    const attemptReconnect = async () => {
+      const isHealthy = await checkServerHealth();
+      
+      if (isHealthy && stompClient) {
+        // 서버가 살아있으면 WebSocket 재연결 시도
+        try {
+          // 기존 클라이언트가 비활성화되어 있으면 다시 활성화
+          if (!stompClient.connected) {
+            stompClient.activate();
+            reconnectAttempts = 0; // 성공하면 카운터 리셋
+          }
+        } catch (error) {
+          // 에러는 조용히 처리 (콘솔에 출력하지 않음)
+        }
+      }
+      
+      reconnectAttempts++;
+      if (reconnectAttempts >= maxReconnectAttempts) {
+        // 최대 시도 횟수에 도달하면 간격을 늘림 (30초마다)
+        if (healthCheckInterval) {
+          clearInterval(healthCheckInterval);
+        }
+        healthCheckInterval = setInterval(attemptReconnect, 30000);
+      }
+    };
+
+    // 처음에는 5초마다 체크
+    healthCheckInterval = setInterval(attemptReconnect, 5000);
+    
+    // 즉시 한 번 체크
+    attemptReconnect();
+
+    return () => {
+      if (healthCheckInterval) {
+        clearInterval(healthCheckInterval);
+      }
+    };
+  }, [isConnected, stompClient]);
 
   // 보스 타입 변경 시 상태 재동기화
   useEffect(() => {

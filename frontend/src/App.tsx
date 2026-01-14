@@ -239,7 +239,16 @@ function App() {
     return (
       <div className="app">
         <div className="loading-container">
-          <h2>연결 중...</h2>
+          <div className="server-status-card">
+            <div className="server-status-header">
+              <div className="status-indicator status-disconnected"></div>
+              <h2>서버 연결 중...</h2>
+            </div>
+            <div className="server-status-message">
+              <p>무료 서버를 사용 중이므로, 사용자가 없을 시 서버가 자동으로 잠깁니다.</p>
+              <p>서버를 깨우는 중이며, 약 2~3분 정도 소요됩니다.</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -255,7 +264,10 @@ function App() {
           selectedBossType={selectedBossType} 
           onBossTypeChange={setSelectedBossType} 
         />
-          <div className="connection-status">연결됨</div>
+          <div className="connection-status">
+            <div className="status-indicator status-connected"></div>
+            <span>연결됨</span>
+          </div>
         </div>
 
   
