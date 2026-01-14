@@ -93,10 +93,20 @@ export default function ChannelBlock({
     
     if (isDragonBoss && selectedDragonType && onDragonColorChange) {
       // 용 레이드: 선택된 용 타입에 색상 적용
-      onDragonColorChange(selectedDragonType, colorName);
+      // 회색 버튼 클릭 시 색상 초기화
+      if (colorName === 'gray') {
+        onDragonColorChange(selectedDragonType, '');
+      } else {
+        onDragonColorChange(selectedDragonType, colorName);
+      }
     } else {
       // 해골왕/수화룡: 일반 상태 변경
-      onStatusChange(colorName);
+      // 회색 버튼 클릭 시 상태 초기화
+      if (colorName === 'gray') {
+        onStatusChange('');
+      } else {
+        onStatusChange(colorName);
+      }
     }
   };
 

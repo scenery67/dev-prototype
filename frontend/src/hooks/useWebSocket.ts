@@ -131,23 +131,39 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
             };
             
             // 용 색상 업데이트
-            if (data.dragonType && data.color) {
-              newState.dragonColors = {
-                ...newState.dragonColors,
-                [data.dragonType]: data.color,
-              };
+            if (data.dragonType) {
+              // 초기화인 경우 (color가 null이거나 빈 문자열)
+              if (!data.color || data.color === '') {
+                const updatedDragonColors = { ...newState.dragonColors };
+                delete updatedDragonColors[data.dragonType];
+                newState.dragonColors = updatedDragonColors;
+              } else {
+                // 일반 업데이트
+                newState.dragonColors = {
+                  ...newState.dragonColors,
+                  [data.dragonType]: data.color,
+                };
+              }
             }
             
             // 수화룡 시간 업데이트
-            if (data.hydraType && data.caughtTime && data.spawnTime) {
-              newState.hydraStates = {
-                ...newState.hydraStates,
-                [data.hydraType]: {
-                  caughtTime: data.caughtTime,
-                  spawnTime: data.spawnTime,
-                  spawnMinutes: data.spawnMinutes || newState.hydraStates[data.hydraType]?.spawnMinutes,
-                },
-              };
+            if (data.hydraType) {
+              // 초기화인 경우 (caughtTime과 spawnTime이 모두 null)
+              if (data.caughtTime === null && data.spawnTime === null) {
+                const updatedHydraStates = { ...newState.hydraStates };
+                delete updatedHydraStates[data.hydraType];
+                newState.hydraStates = updatedHydraStates;
+              } else if (data.caughtTime && data.spawnTime) {
+                // 일반 업데이트
+                newState.hydraStates = {
+                  ...newState.hydraStates,
+                  [data.hydraType]: {
+                    caughtTime: data.caughtTime,
+                    spawnTime: data.spawnTime,
+                    spawnMinutes: data.spawnMinutes || newState.hydraStates[data.hydraType]?.spawnMinutes,
+                  },
+                };
+              }
             }
             
             newStates[selectedBossType][data.channelId!] = newState;

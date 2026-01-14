@@ -32,7 +32,6 @@ export default function HydraSpawnSettings({
 
   return (
     <div className="hydra-spawn-settings">
-      <h4>수화룡 젠 시간 설정</h4>
       <div className="hydra-spawn-settings-content">
         <div className="hydra-spawn-setting-item">
           <label>수룡:</label>

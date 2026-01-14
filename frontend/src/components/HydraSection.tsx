@@ -19,13 +19,19 @@ export default function HydraSection({
   const [timeInput, setTimeInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const [remainingTime, setRemainingTime] = useState<string>('');
+  const [shouldHighlight, setShouldHighlight] = useState(false);
+  const [shouldShowRed, setShouldShowRed] = useState(false);
+  const [shouldBlink, setShouldBlink] = useState(false);
 
   const spawnMinutes = hydraState?.spawnMinutes ?? defaultSpawnMinutes;
 
-  // 카운트다운 타이머
+  // 카운트다운 타이머 및 하이라이트 체크
   useEffect(() => {
     if (!hydraState?.spawnTime) {
       setRemainingTime('');
+      setShouldHighlight(false);
+      setShouldShowRed(false);
+      setShouldBlink(false);
       return;
     }
 
@@ -33,9 +39,23 @@ export default function HydraSection({
       const now = Date.now();
       const spawnTime = hydraState.spawnTime!;
       const diff = spawnTime - now;
+      const diffSeconds = Math.floor(diff / 1000);
+
+      // 5분 전(-300초)부터 10분 후(600초)까지 하이라이트
+      setShouldHighlight(diffSeconds >= -600 && diffSeconds <= 300);
+
+      // 5분 전부터 빨간색 표시
+      setShouldShowRed(diffSeconds <= 300);
+
+      // 젠 됨 이후 10분까지 점멸
+      setShouldBlink(diffSeconds < 0 && diffSeconds >= -600);
 
       if (diff <= 0) {
-        setRemainingTime('젠됨');
+        // 젠된 후 경과 시간 표시
+        const absDiff = Math.abs(diff);
+        const minutes = Math.floor(absDiff / 60000);
+        const seconds = Math.floor((absDiff % 60000) / 1000);
+        setRemainingTime(`젠됨 (+${minutes}분 ${seconds}초)`);
         return;
       }
 
@@ -92,33 +112,33 @@ export default function HydraSection({
     }
 
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const caughtDateTime = new Date(today);
-    caughtDateTime.setHours(hours, minutes, 0, 0);
+    // 로컬 시간으로 정확하게 설정 (입력한 시간을 그대로 사용)
+    const caughtDateTime = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      hours,
+      minutes,
+      0,
+      0
+    );
 
-    // 입력한 시간이 현재 시간보다 이전이면 내일로 설정
-    if (caughtDateTime <= now) {
-      caughtDateTime.setDate(caughtDateTime.getDate() + 1);
-    }
-
-    // 잡힌 시간을 ISO 문자열로 저장
+    // 잡힌 시간을 ISO 문자열로 저장 (handleCaught와 동일한 방식)
     const caughtTime = caughtDateTime.toISOString();
     
-    // 젠 예정 시간 계산 (잡힌 시간 + 젠 시간(분))
-    const spawnDateTime = new Date(caughtDateTime);
-    spawnDateTime.setMinutes(spawnDateTime.getMinutes() + spawnMinutes);
-    const spawnTime = spawnDateTime.getTime();
+    // 젠 예정 시간 계산 (handleCaught와 동일한 방식: timestamp에 분을 더함)
+    const caughtTimeStamp = caughtDateTime.getTime();
+    const spawnTime = caughtTimeStamp + spawnMinutes * 60 * 1000;
 
     onTimeUpdate(hydraType, caughtTime, spawnTime);
 
     setTimeInput('');
   };
 
-  const formatTime = (timestamp: number): string => {
-    const date = new Date(timestamp);
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}${minutes}`;
+  const handleReset = () => {
+    if (isSelectionMode) return;
+    // 빈 값으로 업데이트하여 리셋
+    onTimeUpdate(hydraType, '', 0);
   };
 
   const formatDateTime = (isoString: string): string => {
@@ -128,13 +148,30 @@ export default function HydraSection({
     return `${hours}:${minutes}`;
   };
 
+  const formatTimeWithColon = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   return (
-    <div className="hydra-section">
+    <div className={`hydra-section ${shouldHighlight || shouldBlink ? 'hydra-section-alert' : ''} ${shouldBlink ? 'hydra-section-blink' : ''} hydra-section-${hydraType === '수룡' ? 'water' : 'fire'}`}>
       <div className="hydra-section-header">
-        <h4>{hydraType}</h4>
-        {hydraState?.spawnMinutes && (
-          <span className="hydra-spawn-minutes">({hydraState.spawnMinutes}분)</span>
-        )}
+        <div className="hydra-section-header-left">
+          <h4>{hydraType}</h4>
+          {hydraState?.spawnMinutes && (
+            <span className="hydra-spawn-minutes">({hydraState.spawnMinutes}분)</span>
+          )}
+        </div>
+        <button
+          onClick={handleReset}
+          className="btn-hydra-reset"
+          disabled={isSelectionMode || !hydraState?.spawnTime}
+          title="시간 데이터 초기화"
+        >
+          초기화
+        </button>
       </div>
 
       <>
@@ -163,7 +200,7 @@ export default function HydraSection({
             type="text"
             value={timeInput}
             onChange={handleTimeInputChange}
-            placeholder="2205"
+            placeholder="시분 입력 (예: 1210)"
             maxLength={4}
             className="hydra-time-input"
             disabled={isSelectionMode}
@@ -182,26 +219,26 @@ export default function HydraSection({
           </button>
         </div>
 
-        {hydraState?.caughtTime && hydraState?.spawnTime && (
-          <div className="hydra-time-info">
-            <div className="hydra-time-row">
-              <span className="hydra-time-label">잡힌 시간:</span>
-              <span className="hydra-time-value">{formatDateTime(hydraState.caughtTime)}</span>
-            </div>
-            <div className="hydra-time-row">
-              <span className="hydra-time-label">젠 예정:</span>
-              <span className="hydra-time-value">{formatTime(hydraState.spawnTime)}</span>
-            </div>
-            {remainingTime && (
-              <div className="hydra-time-row">
-                <span className="hydra-time-label">남은 시간:</span>
-                <span className={`hydra-time-value ${remainingTime === '젠됨' ? 'spawned' : ''}`}>
-                  {remainingTime}
-                </span>
-              </div>
-            )}
+        <div className="hydra-time-info">
+          <div className="hydra-time-row">
+            <span className="hydra-time-label">잡힌 시간:</span>
+            <span className="hydra-time-value">
+              {hydraState?.caughtTime ? formatDateTime(hydraState.caughtTime) : '-'}
+            </span>
           </div>
-        )}
+          <div className="hydra-time-row">
+            <span className="hydra-time-label">젠 예정:</span>
+            <span className="hydra-time-value">
+              {hydraState?.spawnTime ? formatTimeWithColon(hydraState.spawnTime) : '-'}
+            </span>
+          </div>
+          <div className="hydra-time-row">
+            <span className="hydra-time-label">남은 시간:</span>
+            <span className={`hydra-time-value ${shouldShowRed ? 'spawned' : ''} ${shouldBlink ? 'spawned-blink' : ''}`}>
+              {remainingTime || '-'}
+            </span>
+          </div>
+        </div>
       </>
     </div>
   );

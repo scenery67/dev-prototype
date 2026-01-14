@@ -119,8 +119,13 @@ public class BossRaidStateService {
             channelState.setDragonColors(new ConcurrentHashMap<>());
         }
         
-        // 용 타입별 색상 업데이트
-        channelState.getDragonColors().put(dragonType, color);
+        // 색상 초기화인 경우 (null) 맵에서 제거
+        if (color == null) {
+            channelState.getDragonColors().remove(dragonType);
+        } else {
+            // 용 타입별 색상 업데이트
+            channelState.getDragonColors().put(dragonType, color);
+        }
     }
 
     /**
@@ -148,6 +153,12 @@ public class BossRaidStateService {
                 return newState;
             }
         );
+        
+        // 초기화인 경우 (null 값) 맵에서 제거
+        if (caughtTime == null && spawnTime == null) {
+            channelState.getHydraStates().remove(hydraType);
+            return;
+        }
         
         // 시간 업데이트
         hydraState.setCaughtTime(caughtTime);

@@ -7,6 +7,8 @@ import StatusLegend from './components/StatusLegend';
 import ChannelSettingsSection from './components/ChannelSettingsSection';
 import ChannelBlock from './components/ChannelBlock';
 import ImageAddModal from './components/ImageAddModal';
+import HydraSpawnAlert from './components/HydraSpawnAlert';
+import HydraImminentSpawn from './components/HydraImminentSpawn';
 import './App.css';
 
 function App() {
@@ -88,14 +90,17 @@ function App() {
   const handleHydraTimeUpdate = (channelId: string, hydraType: string, caughtTime: string, spawnTime: number): void => {
     if (!stompClient || !selectedBossType || isSelectionMode) return;
     
+    // 초기화인 경우 (빈 문자열과 0)
+    const isReset = !caughtTime && spawnTime === 0;
+    
     stompClient.publish({
       destination: `/app/boss/hydra.time`,
       body: JSON.stringify({
         bossType: selectedBossType,
         channelId,
         hydraType,
-        caughtTime,
-        spawnTime,
+        caughtTime: isReset ? null : caughtTime,
+        spawnTime: isReset ? null : spawnTime,
         type: 'HYDRA_TIME',
       }),
     });
@@ -245,14 +250,21 @@ function App() {
       <div className="boss-raid-container">
         {/* 헤더 */}
         <div className="boss-raid-header">
-          <h1>{selectedBossType} 레이드</h1>
-          <div className="connection-status">연결됨</div>
-        </div>
-
-        {/* 보스 탭 */}
+                {/* 보스 탭 */}
         <BossTabs 
           selectedBossType={selectedBossType} 
           onBossTypeChange={setSelectedBossType} 
+        />
+          <div className="connection-status">연결됨</div>
+        </div>
+
+  
+
+        {/* 젠 예상 알림 (수화룡 레이드일 때만) */}
+        <HydraSpawnAlert
+          channels={getCurrentBossChannels()}
+          channelStates={channelStates}
+          selectedBossType={selectedBossType}
         />
 
         {/* 채널 설정 섹션 */}
@@ -271,13 +283,22 @@ function App() {
           stompClient={stompClient}
         />
 
+        {/* 젠 임박 채널 섹션 (수화룡 레이드일 때만) */}
+        <HydraImminentSpawn
+          channels={getCurrentBossChannels()}
+          channelStates={channelStates[selectedBossType] || {}}
+          selectedBossType={selectedBossType}
+        />
+
         {/* 채널 목록 섹션 */}
         <div className="channel-list-section">
           <div className="channel-list-header">
             <h2>채널 목록</h2>
-            <div className="channel-list-header-right">
-              <StatusLegend />
-            </div>
+            {selectedBossType !== '수화룡' && (
+              <div className="channel-list-header-right">
+                <StatusLegend />
+              </div>
+            )}
           </div>
 
           {/* 채널 그리드 */}

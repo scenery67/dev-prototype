@@ -136,10 +136,17 @@ public class BossRaidController {
     public void handleChannelStatus(BossRaidMessage message) {
         String bossType = message.getBossType();
         String channelId = message.getChannelId();
+        String status = message.getStatus();
+        
         if (channelId == null || bossType == null) return;
         
+        // 빈 문자열인 경우 null로 변환 (상태 초기화)
+        if (status != null && status.isEmpty()) {
+            status = null;
+        }
+        
         // 서버 메모리에 상태 저장
-        stateService.updateChannelStatus(bossType, channelId, message.getStatus());
+        stateService.updateChannelStatus(bossType, channelId, status);
         
         // 실시간 브로드캐스트
         message.setType(BossRaidMessage.MessageType.STATE_CHANGE);
@@ -173,7 +180,12 @@ public class BossRaidController {
         String dragonType = message.getDragonType();
         String color = message.getColor();
         
-        if (channelId == null || bossType == null || dragonType == null || color == null) return;
+        if (channelId == null || bossType == null || dragonType == null) return;
+        
+        // 빈 문자열인 경우 null로 변환 (색상 초기화)
+        if (color != null && color.isEmpty()) {
+            color = null;
+        }
         
         // 서버 메모리에 상태 저장
         stateService.updateDragonColor(bossType, channelId, dragonType, color);
@@ -194,7 +206,19 @@ public class BossRaidController {
         String caughtTime = message.getCaughtTime();
         Long spawnTime = message.getSpawnTime();
         
-        if (channelId == null || bossType == null || hydraType == null || caughtTime == null || spawnTime == null) return;
+        if (channelId == null || bossType == null || hydraType == null) return;
+        
+        // 초기화인 경우 (caughtTime과 spawnTime이 모두 null)
+        if (caughtTime == null && spawnTime == null) {
+            stateService.updateHydraTime(bossType, channelId, hydraType, null, null);
+            // 실시간 브로드캐스트
+            message.setType(BossRaidMessage.MessageType.STATE_CHANGE);
+            messagingTemplate.convertAndSend("/topic/boss-raid/channel-state/" + bossType, message);
+            return;
+        }
+        
+        // 일반 업데이트인 경우 null 체크
+        if (caughtTime == null || spawnTime == null) return;
         
         // 서버 메모리에 상태 저장
         stateService.updateHydraTime(bossType, channelId, hydraType, caughtTime, spawnTime);

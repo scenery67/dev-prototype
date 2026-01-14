@@ -54,38 +54,33 @@
   color: #1976d2;
 }
 
-/* 보스 탭 섹션 */
-.boss-tabs-section {
-  padding: 15px 30px 0;
-  background: #f8f9fa;
-  border-bottom: 2px solid #e0e0e0;
-}
-
+/* 보스 탭 */
 .boss-tabs {
   display: flex;
-  gap: 10px;
-  border-bottom: 2px solid #e0e0e0;
+  gap: 8px;
+  align-items: center;
 }
 
 .boss-tab {
-  padding: 12px 24px;
+  padding: 8px 16px;
   border: none;
   background: transparent;
   font-size: 16px;
   font-weight: 600;
   color: #666;
   cursor: pointer;
-  border-bottom: 3px solid transparent;
+  border-radius: 6px;
   transition: all 0.2s;
 }
 
 .boss-tab:hover {
   color: #667eea;
+  background: #f5f5f5;
 }
 
 .boss-tab.active {
   color: #667eea;
-  border-bottom-color: #667eea;
+  background: #f0f4ff;
 }
 
 /* 채널 목록 섹션 */
@@ -205,7 +200,7 @@
 /* 채널 그리드 */
 .channel-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 200px));
+  grid-template-columns: repeat(5, 1fr);
   gap: 5px;
   justify-content: center;
 }
@@ -214,13 +209,13 @@
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  padding: 15px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   transition: all 0.3s;
   position: relative;
-  width: 200px;
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -336,13 +331,15 @@
 
 .btn-save-small,
 .btn-cancel-small {
-  padding: 6px 12px;
+  padding: 4px 12px;
   border: none;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  height: 28px;
+  box-sizing: border-box;
 }
 
 .btn-save-small {
@@ -477,27 +474,76 @@
 .hydra-sections {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  margin-top: 15px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .hydra-section {
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: 6px;
+  padding: 8px;
   background: #f9f9f9;
+  transition: all 0.3s;
+}
+
+.hydra-section-water {
+  border-left: 4px solid #2196f3;
+  background: #e3f2fd;
+}
+
+.hydra-section-fire {
+  border-left: 4px solid #f44336;
+  background: #ffebee;
+}
+
+.hydra-section.hydra-section-alert {
+  border: 3px solid #ff9800;
+  box-shadow: 0 0 15px rgba(255, 152, 0, 0.5);
+  animation: hydra-alert-pulse 2s ease-in-out infinite;
+}
+
+.hydra-section.hydra-section-blink {
+  border: 3px solid #f44336;
+  animation: hydra-alert-blink 1s ease-in-out infinite;
+}
+
+@keyframes hydra-alert-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(255, 152, 0, 0.8);
+  }
+}
+
+@keyframes hydra-alert-blink {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 15px rgba(244, 67, 54, 0.5);
+  }
+  50% {
+    opacity: 0.3;
+    box-shadow: 0 0 25px rgba(244, 67, 54, 0.8);
+  }
 }
 
 .hydra-section-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.hydra-section-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .hydra-section-header h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -506,16 +552,39 @@
   color: #666;
 }
 
+.btn-hydra-reset {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  color: #666;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-hydra-reset:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #999;
+  color: #333;
+}
+
+.btn-hydra-reset:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .hydra-buttons {
   display: flex;
-  gap: 5px;
-  margin-bottom: 5px;
+  gap: 4px;
+  margin-bottom: 4px;
 }
 
 .hydra-time-input-row {
   display: flex;
-  gap: 5px;
-  margin-bottom: 10px;
+  gap: 4px;
+  margin-bottom: 6px;
   align-items: center;
 }
 
@@ -523,12 +592,12 @@
 .btn-hydra-5min,
 .btn-hydra-time-input {
   flex: 1;
-  padding: 6px 12px;
+  padding: 4px 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   background: white;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   transition: all 0.2s;
 }
 
@@ -572,13 +641,29 @@
   font-weight: 700;
 }
 
+.hydra-time-value.spawned-blink {
+  animation: hydra-time-blink 1s ease-in-out infinite;
+}
+
+@keyframes hydra-time-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
 .hydra-time-input {
-  flex: 1;
-  padding: 6px 10px;
+  flex: 0 0 70px;
+  padding: 4px 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 12px;
   text-align: center;
+  width: 180px;
+  height: 28px;
+  box-sizing: border-box;
 }
 
 .hydra-time-input:disabled {
@@ -1034,6 +1119,193 @@
   background: #5568d3;
 }
 
+/* 젠 예상 알림 섹션 */
+.hydra-spawn-alert-section {
+  margin: 10px 30px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 젠 임박 채널 섹션 */
+.hydra-imminent-spawn-section {
+  margin: 10px 30px;
+  background: white;
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
+}
+
+.hydra-imminent-spawn-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hydra-imminent-spawn-section h3::before {
+  content: '⚡';
+  font-size: 18px;
+}
+
+.hydra-imminent-spawn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 150px);
+  gap: 12px;
+}
+
+.hydra-imminent-spawn-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.3s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 150px;
+  box-sizing: border-box;
+}
+
+.hydra-imminent-spawn-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.hydra-imminent-spawn-card.imminent {
+  border-color: #ff9800;
+  box-shadow: 0 2px 12px rgba(255, 152, 0, 0.3);
+}
+
+.hydra-imminent-spawn-card.spawned {
+  border-color: #f44336;
+  box-shadow: 0 2px 12px rgba(244, 67, 54, 0.3);
+}
+
+.imminent-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.imminent-channel {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+}
+
+.imminent-hydra-type {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+
+.imminent-hydra-type.water {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+}
+
+.imminent-hydra-type.fire {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+}
+
+.imminent-time {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  padding: 6px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.imminent-time.upcoming {
+  color: #f44336;
+  background: #ffebee;
+  animation: pulse-red 2s ease-in-out infinite;
+}
+
+.imminent-time.past {
+  color: #f44336;
+  background: #ffebee;
+  animation: pulse-red 1s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.hydra-spawn-alert-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hydra-spawn-alert-section h3::before {
+  content: '⏰';
+  font-size: 16px;
+}
+
+.hydra-spawn-alert-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hydra-spawn-alert-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.alert-channel {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.alert-hydra-type {
+  font-weight: 600;
+  color: #333;
+  padding: 2px 6px;
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+.alert-time {
+  font-weight: 600;
+  color: #333;
+}
+
+.alert-time.alert-upcoming {
+  color: #4caf50;
+}
+
+.alert-time.alert-past {
+  color: #f44336;
+}
+
 /* 채널 설정 섹션 */
 .channel-settings-section {
   margin: 10px 30px;
@@ -1191,6 +1463,18 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+.hydra-spawn-settings-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
 .channel-add-area h4,
 .channel-delete-area h4 {
   font-size: 13px;
@@ -1212,6 +1496,63 @@
 .channel-delete-area h4::before {
   content: '🗑️';
   font-size: 14px;
+}
+
+.hydra-spawn-settings-area h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #667eea;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hydra-spawn-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hydra-spawn-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hydra-spawn-setting-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hydra-spawn-setting-item label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  min-width: 40px;
+}
+
+.hydra-spawn-input {
+  width: 60px;
+  padding: 6px 8px;
+  border: 2px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.hydra-spawn-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.hydra-spawn-setting-item span {
+  font-size: 13px;
+  color: #666;
 }
 
 .channel-add-input {

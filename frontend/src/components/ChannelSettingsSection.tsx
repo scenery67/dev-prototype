@@ -59,7 +59,7 @@ export default function ChannelSettingsSection({
             />
           </div>
 
-          {/* 오른쪽: 채널 삭제 영역 */}
+          {/* 중간: 채널 삭제 영역 */}
           <div className="channel-delete-area">
             <h4>채널 삭제</h4>
             <ChannelSelectionControls
@@ -71,18 +71,17 @@ export default function ChannelSettingsSection({
               onDeleteSelected={onDeleteSelected}
             />
           </div>
-        </div>
-      )}
 
-      {/* 수화룡 젠 시간 설정 (수화룡 레이드일 때만) */}
-      {selectedBossType === '수화룡' && (
-        <div className="hydra-spawn-settings-section">
-          <HydraSpawnSettings
-            onSpawnSettingsUpdate={(hydraType, spawnMinutes) => {
-              // 설정 업데이트 처리
-            }}
-            stompClient={stompClient}
-          />
+          {/* 오른쪽: 수화룡 젠 시간 설정 */}
+          <div className="hydra-spawn-settings-area">
+            <h4>수화룡 젠 시간 설정</h4>
+            <HydraSpawnSettings
+              onSpawnSettingsUpdate={(_hydraType, _spawnMinutes) => {
+                // 설정 업데이트 처리
+              }}
+              stompClient={stompClient}
+            />
+          </div>
         </div>
       )}
     </div>
