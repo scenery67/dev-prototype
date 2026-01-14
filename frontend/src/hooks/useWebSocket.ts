@@ -32,9 +32,8 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
 
     const client = new Client({
       webSocketFactory: () => new SockJS(getWebSocketUrl()) as any,
-      onConnect: (frame) => {
+      onConnect: () => {
         setIsConnected(true);
-        console.log('WebSocket connected, frame:', frame);
         
         // 채널 목록 구독
         client.subscribe('/topic/boss-raid/channels', (message) => {
@@ -50,32 +49,24 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
         });
         
         // 개인 큐 구독 (초기 동기화)
-        // Spring의 convertAndSendToUser는 /user/{username}/queue/boss-state로 변환
-        // 세션 ID를 사용자 이름으로 사용하는 경우 /user/{sessionId}/queue/boss-state가 됨
-        // 하지만 프론트엔드에서는 /user/queue/boss-state로 구독하면 Spring이 자동으로 매칭
-        client.subscribe('/user/queue/boss-state', (message) => {
-          console.log('Message received on /user/queue/boss-state:', message);
+        // 백엔드에서 /queue/boss-state로 전송하고, 프론트엔드에서도 동일한 경로로 구독
+        client.subscribe('/queue/boss-state', (message) => {
           const data: BossRaidMessage = JSON.parse(message.body);
-          console.log('STATE_SYNC received:', JSON.stringify(data, null, 2));
           if (data.type === 'STATE_SYNC') {
             if (data.fullState) {
               // 보스별 채널 상태 설정 (status, memo 포함)
               const fullState = data.fullState as { [bossType: string]: { [channelId: string]: ChannelState } };
-              console.log('Full state received:', fullState);
               // 깊은 복사하여 상태 설정
               const normalizedState: { [bossType: string]: { [channelId: string]: ChannelState } } = {};
               Object.entries(fullState).forEach(([bossType, channels]) => {
                 normalizedState[bossType] = {};
                       Object.entries(channels).forEach(([channelId, state]) => {
-                        console.log(`Processing ${bossType}/${channelId}:`, state);
-                        
                         // dragonColors 처리: 빈 객체가 아닌 경우에만 포함
                         let dragonColors: { [dragonType: string]: string } | undefined = undefined;
                         if (state?.dragonColors) {
                           const colors = state.dragonColors;
                           if (colors && typeof colors === 'object' && Object.keys(colors).length > 0) {
                             dragonColors = { ...colors };
-                            console.log(`  -> dragonColors set for ${bossType}/${channelId}:`, dragonColors);
                           }
                         }
                         
@@ -108,7 +99,6 @@ export function useWebSocket(selectedBossType: string): UseWebSocketReturn {
                         };
                       });
               });
-              console.log('Normalized state:', normalizedState);
               setChannelStates(normalizedState);
             }
             if (data.bossChannels) {
