@@ -277,8 +277,14 @@ public class BossRaidStateService {
             Map<String, BossRaidMessage.ChannelState> copiedBossChannels = new HashMap<>();
             Map<String, BossRaidMessage.ChannelState> bossChannels = bossChannelStates.get(bossType);
             
-            // 공통 채널 목록의 모든 채널에 대해 상태 가져오기
-            for (String channelId : commonChannels) {
+            // bossChannelStates에 저장된 모든 채널 상태를 반환
+            // commonChannels와 bossChannels의 합집합을 사용
+            java.util.Set<String> allChannels = new java.util.HashSet<>(commonChannels);
+            if (bossChannels != null) {
+                allChannels.addAll(bossChannels.keySet());
+            }
+            
+            for (String channelId : allChannels) {
                 BossRaidMessage.ChannelState state = null;
                 if (bossChannels != null) {
                     state = bossChannels.get(channelId);

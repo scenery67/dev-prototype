@@ -261,6 +261,28 @@ public class BossRaidController {
         Map<String, Map<String, BossRaidMessage.ChannelState>> fullState = stateService.getFullState();
         Map<String, java.util.Set<String>> bossChannels = stateService.getAllBossChannels();
         
+        // 디버깅: 상태 확인
+        System.out.println("=== STATE SYNC REQUEST ===");
+        System.out.println("Session ID: " + sessionId);
+        System.out.println("Boss Channels: " + bossChannels);
+        fullState.forEach((bossType, channels) -> {
+            System.out.println("Boss Type: " + bossType + ", Channels: " + channels.size());
+            channels.forEach((channelId, state) -> {
+                System.out.println("  Channel: " + channelId);
+                System.out.println("    Status: " + state.getStatus());
+                System.out.println("    Memo: " + state.getMemo());
+                if (state.getDragonColors() != null) {
+                    System.out.println("    Dragon Colors: " + state.getDragonColors());
+                }
+                if (state.getHydraStates() != null) {
+                    System.out.println("    Hydra States: " + state.getHydraStates().size());
+                    state.getHydraStates().forEach((type, hydraState) -> {
+                        System.out.println("      " + type + ": caughtTime=" + hydraState.getCaughtTime() + ", spawnTime=" + hydraState.getSpawnTime());
+                    });
+                }
+            });
+        });
+        
         // 동기화 메시지 생성
         BossRaidMessage syncMessage = new BossRaidMessage();
         syncMessage.setType(BossRaidMessage.MessageType.STATE_SYNC);
@@ -268,11 +290,15 @@ public class BossRaidController {
         syncMessage.setBossChannels(bossChannels);
         
         // 요청한 사용자에게만 전송
+        // convertAndSendToUser는 /user/{username}/queue/boss-state로 변환
+        // 세션 ID를 사용자 이름으로 사용 (Spring이 자동으로 처리)
         messagingTemplate.convertAndSendToUser(
             sessionId,
             "/queue/boss-state",
             syncMessage
         );
+        
+        System.out.println("Sent sync message using convertAndSendToUser with sessionId: " + sessionId);
     }
 
     /**
