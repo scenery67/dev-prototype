@@ -149,7 +149,7 @@ export default function ImageAddModal({
             <p className="example-label">예시 이미지 (이런 형태의 스크린샷을 붙여넣으세요)</p>
             <div className="example-image-placeholder">
               <img 
-                src="/channel-example.png" 
+                src={`${import.meta.env.BASE_URL}channel-example.png`}
                 alt="채널 예시 이미지" 
                 className="example-image"
               />

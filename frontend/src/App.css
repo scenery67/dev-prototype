@@ -51,24 +51,8 @@
 
 .server-status-message {
   text-align: left;
-  color: #333;
+  color: #666;
   line-height: 1.8;
-  font-size: 15px;
-}
-
-.server-status-message p {
-  margin-bottom: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.server-status-message p:last-child {
-  border-bottom: none;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 2px solid #e0e0e0;
-  font-weight: 600;
-  color: #d32f2f;
 }
 
 .server-status-message p {
