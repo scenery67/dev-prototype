@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - deploy
+      - main  # 기본 브랜치에도 추가하여 워크플로우 인식
     paths:
       - 'frontend/**'
   workflow_dispatch:
