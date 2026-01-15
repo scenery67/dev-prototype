@@ -421,6 +421,7 @@
   transition: all 0.2s;
   height: 28px;
   box-sizing: border-box;
+  white-space: nowrap; 
 }
 
 .btn-save-small {
