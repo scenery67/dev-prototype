@@ -1,44 +1,36 @@
 package com.chatapp.controller;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 피드백/문의사항 컨트롤러
+ * 피드백/문의사항 컨트롤러 (Webhook 방식)
+ * Slack/Discord Webhook을 통한 실시간 알림
+ * Render 무료 서버에서도 SMTP 포트 차단 없이 사용 가능
  */
 @RestController
 @CrossOrigin(origins = "${cors.allowed-origins:*}")
 public class FeedbackController {
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
-
-    @Value("${feedback.recipient.email:4562sky@naver.com}")
-    private String recipientEmail;
-
-    @Value("${feedback.sender.email:feedback@dev-prototype.com}")
-    private String senderEmail;
-
-    @Value("${feedback.sender.name:Feedback}")
-    private String senderName;
+    @Value("${feedback.webhook.url:}")
+    private String webhookUrl;
 
     @Value("${feedback.site.url:}")
     private String siteUrl;
 
-    @Value("${spring.mail.username:}")
-    private String mailUsername;
+    private final WebClient webClient;
 
-    @Value("${spring.mail.password:}")
-    private String mailPassword;
+    public FeedbackController() {
+        this.webClient = WebClient.builder()
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(1024 * 1024))
+                .build();
+    }
 
     /**
      * 피드백/문의사항 전송 API
@@ -48,8 +40,11 @@ public class FeedbackController {
         Map<String, Object> response = new HashMap<>();
         
         try {
-            // 이메일 전송 로직
-            sendEmail(
+            // 로그 출력
+            logFeedback(request);
+            
+            // Webhook 전송
+            sendWebhook(
                 request.getNickname(),
                 request.getEmail() != null && !request.getEmail().isEmpty() ? request.getEmail() : "이메일 미제공",
                 request.getMessage()
@@ -66,92 +61,127 @@ public class FeedbackController {
     }
 
     /**
-     * 이메일 전송
+     * 피드백 로그 출력
      */
-    private void sendEmail(String nickname, String email, String message) {
-        // 로그 출력
+    private void logFeedback(FeedbackRequest request) {
         System.out.println("========================================");
         System.out.println("피드백/문의사항 수신");
         System.out.println("========================================");
-        if (nickname != null && !nickname.isEmpty()) {
-            System.out.println("닉네임: " + nickname);
+        if (request.getNickname() != null && !request.getNickname().isEmpty()) {
+            System.out.println("닉네임: " + request.getNickname());
         }
-        System.out.println("이메일: " + email);
+        System.out.println("이메일: " + (request.getEmail() != null && !request.getEmail().isEmpty() ? request.getEmail() : "이메일 미제공"));
         System.out.println("내용:");
-        System.out.println(message);
+        System.out.println(request.getMessage());
         System.out.println("========================================");
-        
-        // 실제 이메일 전송 (SMTP 설정이 되어 있는 경우)
-        if (mailSender != null) {
-            // 설정 확인 로그
-            System.out.println("mailSender 존재: " + (mailSender != null));
-            System.out.println("mailUsername: " + (mailUsername != null && !mailUsername.isEmpty() ? mailUsername : "비어있음"));
-            System.out.println("mailPassword: " + (mailPassword != null && !mailPassword.isEmpty() ? "설정됨 (길이: " + mailPassword.length() + ")" : "비어있음"));
-            
-            if (mailUsername != null && !mailUsername.isEmpty() 
-                && mailPassword != null && !mailPassword.isEmpty()) {
-                try {
-                    MimeMessage mimeMessage = mailSender.createMimeMessage();
-                    MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-                    
-                    // 이메일 주소만 사용 (이름 제거)
-                    helper.setFrom(senderEmail);
-                    
-                    helper.setTo(recipientEmail);
-                    helper.setSubject("[피드백/문의사항] 새로운 문의가 접수되었습니다");
-                    
-                    StringBuilder emailContent = new StringBuilder();
-                    emailContent.append("<h2>피드백/문의사항</h2>");
-                    emailContent.append("<hr>");
-                    if (nickname != null && !nickname.isEmpty()) {
-                        emailContent.append("<p><strong>닉네임:</strong> ").append(nickname).append("</p>");
-                    }
-                    emailContent.append("<p><strong>이메일:</strong> ").append(email).append("</p>");
-                    emailContent.append("<p><strong>내용:</strong></p>");
-                    emailContent.append("<div style='background: #f5f5f5; padding: 15px; border-radius: 5px; white-space: pre-wrap;'>");
-                    emailContent.append(message.replace("\n", "<br>"));
-                    emailContent.append("</div>");
-                    
-                    // 사이트 바로가기 링크 추가
-                    if (siteUrl != null && !siteUrl.isEmpty()) {
-                        emailContent.append("<hr>");
-                        emailContent.append("<p style='text-align: center; margin-top: 20px;'>");
-                        emailContent.append("<a href='").append(siteUrl).append("' style='display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;'>사이트 바로가기</a>");
-                        emailContent.append("</p>");
-                    }
-                    
-                    helper.setText(emailContent.toString(), true);
-                    
-                    mailSender.send(mimeMessage);
-                    System.out.println("이메일 전송 성공: " + recipientEmail);
-                } catch (MessagingException e) {
-                    System.err.println("========================================");
-                    System.err.println("이메일 전송 실패");
-                    System.err.println("========================================");
-                    System.err.println("오류 메시지: " + e.getMessage());
-                    if (e.getCause() != null) {
-                        System.err.println("원인: " + e.getCause().getMessage());
-                    }
-                    System.err.println("========================================");
-                    e.printStackTrace();
-                    // 이메일 전송 실패해도 로그는 남아있으므로 계속 진행
-                } catch (Exception e) {
-                    System.err.println("========================================");
-                    System.err.println("이메일 전송 중 오류 발생");
-                    System.err.println("========================================");
-                    System.err.println("오류 메시지: " + e.getMessage());
-                    if (e.getCause() != null) {
-                        System.err.println("원인: " + e.getCause().getMessage());
-                    }
-                    System.err.println("========================================");
-                    e.printStackTrace();
-                }
-            } else {
-                System.out.println("이메일 전송 스킵: MAIL_USERNAME 또는 MAIL_PASSWORD가 설정되지 않았습니다.");
-            }
-        } else {
-            System.out.println("이메일 전송 스킵: JavaMailSender 빈이 생성되지 않았습니다. spring.mail 설정을 확인해주세요.");
+    }
+
+    /**
+     * Webhook 전송 (Slack/Discord)
+     */
+    private void sendWebhook(String nickname, String email, String message) {
+        if (webhookUrl == null || webhookUrl.isEmpty()) {
+            System.out.println("Webhook 전송 스킵: WEBHOOK_URL이 설정되지 않았습니다.");
+            return;
         }
+
+        try {
+            // Slack/Discord Webhook 메시지 포맷 구성
+            Map<String, Object> payload = new HashMap<>();
+            
+            // Discord Webhook 형식
+            if (webhookUrl.contains("discord.com") || webhookUrl.contains("discordapp.com")) {
+                payload = createDiscordPayload(nickname, email, message);
+            } 
+            // Slack Webhook 형식
+            else if (webhookUrl.contains("slack.com")) {
+                payload = createSlackPayload(nickname, email, message);
+            }
+            // 기본 형식 (Discord 호환)
+            else {
+                payload = createDiscordPayload(nickname, email, message);
+            }
+
+            // Webhook 전송
+            webClient.post()
+                    .uri(webhookUrl)
+                    .header("Content-Type", "application/json")
+                    .bodyValue(payload)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .timeout(Duration.ofSeconds(10))
+                    .block();
+
+            System.out.println("Webhook 전송 성공: " + webhookUrl);
+        } catch (Exception e) {
+            System.err.println("========================================");
+            System.err.println("Webhook 전송 실패");
+            System.err.println("========================================");
+            System.err.println("오류 메시지: " + e.getMessage());
+            if (e.getCause() != null) {
+                System.err.println("원인: " + e.getCause().getMessage());
+            }
+            System.err.println("========================================");
+            e.printStackTrace();
+            // Webhook 전송 실패해도 로그는 남아있으므로 계속 진행
+        }
+    }
+
+    /**
+     * Discord Webhook 메시지 포맷 생성
+     */
+    private Map<String, Object> createDiscordPayload(String nickname, String email, String message) {
+        Map<String, Object> payload = new HashMap<>();
+        
+        // Discord embeds 형식
+        Map<String, Object> embed = new HashMap<>();
+        embed.put("title", "🔔 새로운 피드백/문의사항");
+        embed.put("color", 3447003); // 파란색
+        
+        StringBuilder description = new StringBuilder();
+        if (nickname != null && !nickname.isEmpty()) {
+            description.append("**닉네임:** ").append(nickname).append("\n");
+        }
+        description.append("**이메일:** ").append(email).append("\n\n");
+        description.append("**내용:**\n```\n").append(message).append("\n```");
+        
+        embed.put("description", description.toString());
+        embed.put("timestamp", java.time.Instant.now().toString());
+        
+        // 사이트 링크 추가
+        if (siteUrl != null && !siteUrl.isEmpty()) {
+            Map<String, Object> footer = new HashMap<>();
+            footer.put("text", "사이트 바로가기");
+            embed.put("footer", footer);
+        }
+
+        payload.put("embeds", new Object[]{embed});
+        
+        return payload;
+    }
+
+    /**
+     * Slack Webhook 메시지 포맷 생성
+     */
+    private Map<String, Object> createSlackPayload(String nickname, String email, String message) {
+        Map<String, Object> payload = new HashMap<>();
+        
+        StringBuilder text = new StringBuilder();
+        text.append("*새로운 피드백/문의사항이 접수되었습니다*\n\n");
+        
+        if (nickname != null && !nickname.isEmpty()) {
+            text.append("*닉네임:* ").append(nickname).append("\n");
+        }
+        text.append("*이메일:* ").append(email).append("\n\n");
+        text.append("*내용:*\n```\n").append(message).append("\n```");
+        
+        if (siteUrl != null && !siteUrl.isEmpty()) {
+            text.append("\n\n<").append(siteUrl).append("|사이트 바로가기>");
+        }
+        
+        payload.put("text", text.toString());
+        
+        return payload;
     }
 
     /**
