@@ -7,6 +7,7 @@ interface FeedbackDropdownProps {
 
 export default function FeedbackDropdown({}: FeedbackDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,6 +51,7 @@ export default function FeedbackDropdown({}: FeedbackDropdownProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          nickname: nickname.trim() || '',
           email: email.trim() || '',
           message: message.trim(),
         }),
@@ -57,6 +59,7 @@ export default function FeedbackDropdown({}: FeedbackDropdownProps) {
 
       if (response.ok) {
         alert('문의사항이 전송되었습니다. 감사합니다!');
+        setNickname('');
         setEmail('');
         setMessage('');
         setIsOpen(false);
@@ -95,6 +98,17 @@ export default function FeedbackDropdown({}: FeedbackDropdownProps) {
           </div>
           
           <form onSubmit={handleSubmit} className="feedback-form">
+            <div className="feedback-field">
+              <label htmlFor="feedback-nickname">닉네임 (선택사항)</label>
+              <input
+                id="feedback-nickname"
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="닉네임을 입력하세요"
+              />
+            </div>
+            
             <div className="feedback-field">
               <label htmlFor="feedback-email">이메일 (선택사항)</label>
               <input
