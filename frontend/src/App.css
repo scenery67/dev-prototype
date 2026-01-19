@@ -281,7 +281,7 @@
 /* 채널 그리드 */
 .channel-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 5px;
   justify-content: center;
 }
@@ -737,13 +737,14 @@
 }
 
 .hydra-time-input {
-  flex: 0 0 70px;
+  flex: 1;
+  min-width: 0;
   padding: 4px 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 12px;
   text-align: center;
-  width: 180px;
+  max-width: 180px;
   height: 28px;
   box-sizing: border-box;
 }
@@ -757,25 +758,25 @@
 /* 반응형 디자인 */
 @media (max-width: 1400px) {
   .channel-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
 
 @media (max-width: 1000px) {
   .channel-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
 }
 
 @media (max-width: 700px) {
   .channel-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 }
 
 @media (max-width: 500px) {
   .channel-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
   
   .channel-list-header {
