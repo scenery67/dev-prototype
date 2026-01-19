@@ -8,6 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -76,13 +77,14 @@ public class FeedbackController {
             // 로그 출력
             logFeedback(request, clientIp);
             
-            // Webhook 전송
-            sendWebhook(
+            // Webhook 전송 (비동기로 처리 - 사용자 응답을 기다리지 않음)
+            sendWebhookAsync(
                 request.getNickname(),
                 request.getEmail() != null && !request.getEmail().isEmpty() ? request.getEmail() : "이메일 미제공",
                 request.getMessage()
             );
             
+            // 로그는 이미 남아있으므로, Webhook 전송 여부와 관계없이 성공으로 처리
             response.put("success", true);
             response.put("message", "피드백이 성공적으로 전송되었습니다.");
             return ResponseEntity.ok(response);
@@ -187,6 +189,21 @@ public class FeedbackController {
     }
 
     /**
+     * Webhook 전송 (비동기 - 사용자 응답을 기다리지 않음)
+     */
+    private void sendWebhookAsync(String nickname, String email, String message) {
+        // 비동기로 실행 (별도 스레드에서 처리)
+        CompletableFuture.runAsync(() -> {
+            try {
+                sendWebhook(nickname, email, message);
+            } catch (Exception e) {
+                System.err.println("비동기 Webhook 전송 중 예외 발생: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    /**
      * Webhook 전송 (Slack/Discord)
      */
     private void sendWebhook(String nickname, String email, String message) {
@@ -212,14 +229,14 @@ public class FeedbackController {
                 payload = createDiscordPayload(nickname, email, message);
             }
 
-            // Webhook 전송
+            // Webhook 전송 (타임아웃 30초로 증가)
             webClient.post()
                     .uri(webhookUrl)
                     .header("Content-Type", "application/json")
                     .bodyValue(payload)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(10))
+                    .timeout(Duration.ofSeconds(30)) // 10초 -> 30초로 증가
                     .block();
 
             System.out.println("Webhook 전송 성공: " + webhookUrl);
