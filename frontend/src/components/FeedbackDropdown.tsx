@@ -57,6 +57,8 @@ export default function FeedbackDropdown({}: FeedbackDropdownProps) {
         }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         alert('문의사항이 전송되었습니다. 감사합니다!');
         setNickname('');
@@ -64,11 +66,18 @@ export default function FeedbackDropdown({}: FeedbackDropdownProps) {
         setMessage('');
         setIsOpen(false);
       } else {
-        throw new Error('전송 실패');
+        // 백엔드에서 보낸 에러 메시지 사용
+        const errorMessage = data.message || '문의사항 전송에 실패했습니다. 다시 시도해주세요.';
+        alert(errorMessage);
       }
     } catch (error) {
       console.error('피드백 전송 오류:', error);
-      alert('문의사항 전송에 실패했습니다. 다시 시도해주세요.');
+      // 네트워크 에러나 JSON 파싱 에러 등
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        alert('서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.');
+      } else {
+        alert('문의사항 전송에 실패했습니다. 다시 시도해주세요.');
+      }
     } finally {
       setIsSubmitting(false);
     }

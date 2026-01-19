@@ -1,13 +1,14 @@
 package com.chatapp.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 피드백/문의사항 컨트롤러 (Webhook 방식)
@@ -24,7 +25,16 @@ public class FeedbackController {
     @Value("${feedback.site.url:}")
     private String siteUrl;
 
+    @Value("${feedback.rate.limit.max:3}")
+    private int rateLimitMax; // 일정 시간 내 최대 요청 수
+
+    @Value("${feedback.rate.limit.window:300}")
+    private int rateLimitWindowSeconds; // 제한 시간 (초)
+
     private final WebClient webClient;
+    
+    // IP별 요청 시간 기록 (스레드 안전)
+    private final Map<String, List<Long>> requestHistory = new ConcurrentHashMap<>();
 
     public FeedbackController() {
         this.webClient = WebClient.builder()
@@ -36,12 +46,35 @@ public class FeedbackController {
      * 피드백/문의사항 전송 API
      */
     @PostMapping("/api/feedback")
-    public ResponseEntity<Map<String, Object>> sendFeedback(@RequestBody FeedbackRequest request) {
+    public ResponseEntity<Map<String, Object>> sendFeedback(
+            @RequestBody FeedbackRequest request,
+            HttpServletRequest httpRequest) {
         Map<String, Object> response = new HashMap<>();
+        
+        // IP 주소 추출
+        String clientIp = getClientIpAddress(httpRequest);
+        
+        // Rate limiting 체크
+        RateLimitResult rateLimitResult = checkRateLimit(clientIp);
+        if (!rateLimitResult.isAllowed()) {
+            response.put("success", false);
+            if (rateLimitResult.getRemainingSeconds() > 0) {
+                long remainingMinutes = rateLimitResult.getRemainingSeconds() / 60;
+                long remainingSecs = rateLimitResult.getRemainingSeconds() % 60;
+                if (remainingMinutes > 0) {
+                    response.put("message", String.format("요청이 너무 많습니다. %d분 %d초 후 다시 시도해주세요.", remainingMinutes, remainingSecs));
+                } else {
+                    response.put("message", String.format("요청이 너무 많습니다. %d초 후 다시 시도해주세요.", remainingSecs));
+                }
+            } else {
+                response.put("message", "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+            }
+            return ResponseEntity.status(429).body(response); // 429 Too Many Requests
+        }
         
         try {
             // 로그 출력
-            logFeedback(request);
+            logFeedback(request, clientIp);
             
             // Webhook 전송
             sendWebhook(
@@ -61,12 +94,89 @@ public class FeedbackController {
     }
 
     /**
+     * 클라이언트 IP 주소 추출
+     */
+    private String getClientIpAddress(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        // X-Forwarded-For는 여러 IP가 있을 수 있으므로 첫 번째 IP만 사용
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
+    }
+
+    /**
+     * Rate limiting 체크
+     * @param clientIp 클라이언트 IP 주소
+     * @return RateLimitResult: 요청 허용 여부와 남은 시간 정보
+     */
+    private RateLimitResult checkRateLimit(String clientIp) {
+        long currentTime = System.currentTimeMillis();
+        long windowStart = currentTime - (rateLimitWindowSeconds * 1000L);
+        
+        // 해당 IP의 요청 기록 가져오기
+        List<Long> requests = requestHistory.computeIfAbsent(clientIp, k -> new ArrayList<>());
+        
+        // 오래된 요청 기록 제거 (현재 시간 - 제한 시간 이전의 기록)
+        requests.removeIf(time -> time < windowStart);
+        
+        // 요청 수가 제한을 초과하면 차단
+        if (requests.size() >= rateLimitMax) {
+            // 가장 오래된 요청이 언제 제거될지 계산 (남은 시간)
+            long oldestRequestTime = requests.isEmpty() ? currentTime : Collections.min(requests);
+            long remainingSeconds = rateLimitWindowSeconds - ((currentTime - oldestRequestTime) / 1000);
+            
+            System.out.println("Rate limit 초과: IP=" + clientIp + ", 요청 수=" + requests.size() + "/" + rateLimitMax + ", 남은 시간=" + remainingSeconds + "초");
+            return new RateLimitResult(false, remainingSeconds);
+        }
+        
+        // 현재 요청 시간 기록
+        requests.add(currentTime);
+        
+        return new RateLimitResult(true, 0);
+    }
+
+    /**
+     * Rate limiting 결과 클래스
+     */
+    private static class RateLimitResult {
+        private final boolean allowed;
+        private final long remainingSeconds;
+
+        public RateLimitResult(boolean allowed, long remainingSeconds) {
+            this.allowed = allowed;
+            this.remainingSeconds = remainingSeconds;
+        }
+
+        public boolean isAllowed() {
+            return allowed;
+        }
+
+        public long getRemainingSeconds() {
+            return remainingSeconds;
+        }
+    }
+
+    /**
      * 피드백 로그 출력
      */
-    private void logFeedback(FeedbackRequest request) {
+    private void logFeedback(FeedbackRequest request, String clientIp) {
         System.out.println("========================================");
         System.out.println("피드백/문의사항 수신");
         System.out.println("========================================");
+        System.out.println("IP: " + clientIp);
         if (request.getNickname() != null && !request.getNickname().isEmpty()) {
             System.out.println("닉네임: " + request.getNickname());
         }
