@@ -204,7 +204,7 @@ public class FeedbackController {
     }
 
     /**
-     * Webhook 전송 (Slack/Discord)
+     * Webhook 전송 (Slack/Discord) - 재시도 로직 포함
      */
     private void sendWebhook(String nickname, String email, String message) {
         if (webhookUrl == null || webhookUrl.isEmpty()) {
@@ -212,46 +212,93 @@ public class FeedbackController {
             return;
         }
 
-        try {
-            // Slack/Discord Webhook 메시지 포맷 구성
-            Map<String, Object> payload = new HashMap<>();
-            
-            // Discord Webhook 형식
-            if (webhookUrl.contains("discord.com") || webhookUrl.contains("discordapp.com")) {
-                payload = createDiscordPayload(nickname, email, message);
-            } 
-            // Slack Webhook 형식
-            else if (webhookUrl.contains("slack.com")) {
-                payload = createSlackPayload(nickname, email, message);
-            }
-            // 기본 형식 (Discord 호환)
-            else {
-                payload = createDiscordPayload(nickname, email, message);
-            }
-
-            // Webhook 전송 (타임아웃 30초로 증가)
-            webClient.post()
-                    .uri(webhookUrl)
-                    .header("Content-Type", "application/json")
-                    .bodyValue(payload)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(30)) // 10초 -> 30초로 증가
-                    .block();
-
-            System.out.println("Webhook 전송 성공: " + webhookUrl);
-        } catch (Exception e) {
-            System.err.println("========================================");
-            System.err.println("Webhook 전송 실패");
-            System.err.println("========================================");
-            System.err.println("오류 메시지: " + e.getMessage());
-            if (e.getCause() != null) {
-                System.err.println("원인: " + e.getCause().getMessage());
-            }
-            System.err.println("========================================");
-            e.printStackTrace();
-            // Webhook 전송 실패해도 로그는 남아있으므로 계속 진행
+        // Slack/Discord Webhook 메시지 포맷 구성
+        Map<String, Object> payload = new HashMap<>();
+        
+        // Discord Webhook 형식
+        if (webhookUrl.contains("discord.com") || webhookUrl.contains("discordapp.com")) {
+            payload = createDiscordPayload(nickname, email, message);
+        } 
+        // Slack Webhook 형식
+        else if (webhookUrl.contains("slack.com")) {
+            payload = createSlackPayload(nickname, email, message);
         }
+        // 기본 형식 (Discord 호환)
+        else {
+            payload = createDiscordPayload(nickname, email, message);
+        }
+
+        // 재시도 로직 (최대 3회 시도)
+        int maxRetries = 3;
+        int retryDelaySeconds = 2; // 재시도 간격 (초)
+        
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                System.out.println("Webhook 전송 시도 " + attempt + "/" + maxRetries);
+                
+                // Webhook 전송 (타임아웃 30초)
+                webClient.post()
+                        .uri(webhookUrl)
+                        .header("Content-Type", "application/json")
+                        .bodyValue(payload)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .timeout(Duration.ofSeconds(30))
+                        .block();
+
+                System.out.println("Webhook 전송 성공: " + webhookUrl);
+                return; // 성공하면 종료
+                
+            } catch (Exception e) {
+                boolean isRetryable = isRetryableError(e);
+                
+                if (attempt < maxRetries && isRetryable) {
+                    // 재시도 가능한 에러이고, 아직 재시도 횟수가 남아있으면
+                    System.err.println("Webhook 전송 실패 (시도 " + attempt + "/" + maxRetries + "): " + e.getMessage());
+                    System.err.println(retryDelaySeconds + "초 후 재시도...");
+                    
+                    try {
+                        Thread.sleep(retryDelaySeconds * 1000L);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        System.err.println("재시도 대기 중 인터럽트 발생");
+                        break;
+                    }
+                } else {
+                    // 재시도 불가능하거나 최대 재시도 횟수 초과
+                    System.err.println("========================================");
+                    System.err.println("Webhook 전송 최종 실패 (시도 " + attempt + "/" + maxRetries + ")");
+                    System.err.println("========================================");
+                    System.err.println("오류 메시지: " + e.getMessage());
+                    if (e.getCause() != null) {
+                        System.err.println("원인: " + e.getCause().getMessage());
+                    }
+                    System.err.println("========================================");
+                    e.printStackTrace();
+                    // Webhook 전송 실패해도 로그는 남아있으므로 계속 진행
+                    return;
+                }
+            }
+        }
+    }
+
+    /**
+     * 재시도 가능한 에러인지 확인
+     */
+    private boolean isRetryableError(Exception e) {
+        String errorMessage = e.getMessage();
+        if (errorMessage == null) {
+            return false;
+        }
+        
+        // 네트워크 관련 에러는 재시도 가능
+        return errorMessage.contains("Connection reset") ||
+               errorMessage.contains("Connection refused") ||
+               errorMessage.contains("timeout") ||
+               errorMessage.contains("TimeoutException") ||
+               (e.getCause() != null && e.getCause().getMessage() != null && 
+                (e.getCause().getMessage().contains("Connection reset") ||
+                 e.getCause().getMessage().contains("Connection refused")));
     }
 
     /**
