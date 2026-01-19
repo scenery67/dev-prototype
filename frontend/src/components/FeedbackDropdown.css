@@ -14,6 +14,13 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feedback-icon {
+  flex-shrink: 0;
 }
 
 .feedback-button:hover {
@@ -148,14 +155,22 @@
 }
 
 .feedback-submit {
-  background: #667eea;
+  background: #5865F2;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
 }
 
 .feedback-submit:hover:not(:disabled) {
-  background: #5568d3;
+  background: #4752C4;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 4px rgba(88, 101, 242, 0.3);
+}
+
+.discord-icon {
+  flex-shrink: 0;
 }
 
 .feedback-submit:disabled {
